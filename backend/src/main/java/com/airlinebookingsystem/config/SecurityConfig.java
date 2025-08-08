@@ -24,6 +24,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/**").permitAll() // Allow all API endpoints
                         .anyRequest().authenticated()
                 );
 

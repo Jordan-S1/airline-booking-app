@@ -16,6 +16,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "airports")
@@ -81,5 +82,17 @@ public class Airport {
      */
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /**
+     * Flights departing from this airport
+     */
+    @OneToMany(mappedBy = "departureAirport", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Flight> departureFlights;
+
+    /**
+     * Flights arriving at this airport
+     */
+    @OneToMany(mappedBy = "arrivalAirport", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Flight> arrivalFlights;
 
 }

@@ -4,8 +4,10 @@ import com.airlinebookingsystem.dto.FlightSearchRequest;
 import com.airlinebookingsystem.dto.FlightSearchResponse;
 import com.airlinebookingsystem.dto.FlightSearchResult;
 import com.airlinebookingsystem.entity.Airport;
+import com.airlinebookingsystem.entity.Airline;
 import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Flight;
+import com.airlinebookingsystem.repository.AirlineRepository;
 import com.airlinebookingsystem.repository.AirportRepository;
 import com.airlinebookingsystem.repository.FlightRepository;
 import com.airlinebookingsystem.util.SeatClassUtils;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 public class FlightService {
     private final FlightRepository flightRepository;
     private final AirportRepository airportRepository;
+    private final AirlineRepository airlineRepository;
 
     /**
      * Retrieves all flights from the system.
@@ -221,7 +224,43 @@ public class FlightService {
                 flightRepository.findByFlightNumber(flight.getFlightNumber()).isPresent()) {
             throw new RuntimeException("Flight number already exists: " + flight.getFlightNumber());
         }
-        log.info("Successfully created new flight: {}", flight.getFlightNumber());
+
+        // Validate and fetch the airline
+        if (flight.getAirline() != null && flight.getAirline().getId() != null) {
+            Airline airline = airlineRepository.findById(flight.getAirline().getId())
+                    .orElseThrow(() -> new RuntimeException("Airline not found with ID: " + flight.getAirline().getId()));
+            flight.setAirline(airline);
+        } else {
+            throw new RuntimeException("Airline is required");
+        }
+
+        // Validate and fetch departure airport
+        if (flight.getDepartureAirport() != null && flight.getDepartureAirport().getId() != null) {
+            Airport departureAirport = airportRepository.findById(flight.getDepartureAirport().getId())
+                    .orElseThrow(() -> new RuntimeException("Departure airport not found with ID: " + flight.getDepartureAirport().getId()));
+            flight.setDepartureAirport(departureAirport);
+        } else {
+            throw new RuntimeException("Departure airport is required");
+        }
+
+        // Validate and fetch arrival airport
+        if (flight.getArrivalAirport() != null && flight.getArrivalAirport().getId() != null) {
+            Airport arrivalAirport = airportRepository.findById(flight.getArrivalAirport().getId())
+                    .orElseThrow(() -> new RuntimeException("Arrival airport not found with ID: " + flight.getArrivalAirport().getId()));
+            flight.setArrivalAirport(arrivalAirport);
+        } else {
+            throw new RuntimeException("Arrival airport is required");
+        }
+
+        // Additional validation
+        if (flight.getDepartureAirport().getId().equals(flight.getArrivalAirport().getId())) {
+            throw new RuntimeException("Departure and arrival airports cannot be the same");
+        }
+        log.info("Successfully created new flight: {} from {} to {}",
+                flight.getFlightNumber(),
+                flight.getDepartureAirport().getCode(),
+                flight.getArrivalAirport().getCode());
+
         return flightRepository.save(flight);
     }
 

@@ -18,9 +18,67 @@ Content-Type: application/json
 }
 
 ###
+
+POST http://localhost:8080/api/v1/airports
+Content-Type: application/json
+
+{
+  "code": "DUB",
+  "name": "Dublin Airport",
+  "city": "Dublin",
+  "country": "Ireland",
+  "timezone": "Europe/Dublin"
+}
+###
+POST http://localhost:8080/api/v1/airlines
+Content-Type: application/json
+
+{
+  "code": "EI",
+  "name": "Aer Lingus",
+  "country": "Ireland"
+}
+
+###
+GET http://localhost:8080/api/v1/airlines
+
+###
 GET http://localhost:8080/api/v1/airports/search?query=London
 
 ###
 GET http://localhost:8080/api/v1/airports/by-country?country=United Kingdom
+
+###
+GET http://localhost:8080/api/v1/flights
+
+###
+POST http://localhost:8080/api/v1/flights
+Content-Type: application/json
+
+{
+  "availableSeats": 150,
+  "basePrice": 200.00,
+  "businessPrice": 500.00,
+  "businessSeats": 20,
+  "duration": 300,
+  "economyPrice": 200.00,
+  "economySeats": 120,
+  "firstClassPrice": 1200.00,
+  "firstClassSeats": 10,
+  "totalSeats": 150,
+  "airline": {
+    "id": 1
+  },
+  "arrivalAirport": {
+    "id": 2
+  },
+  "arrivalTime": "2025-08-15T13:00:00",
+  "departureAirport": {
+    "id": 1
+  },
+  "departureTime": "2025-08-15T08:00:00",
+  "flightNumber": "EI300",
+  "status": "SCHEDULED"
+}
 
 
