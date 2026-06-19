@@ -6,6 +6,8 @@ import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Payment;
 import com.airlinebookingsystem.repository.PaymentRepository;
 import com.airlinebookingsystem.repository.BookingRepository;
+import com.airlinebookingsystem.exception.BookingException;
+import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,7 +51,7 @@ public class PaymentService {
         Optional<Payment> existingPayment = paymentRepository.findByBookingId(booking.getId());
         if (existingPayment.isPresent() &&
                 existingPayment.get().getStatus() == Payment.PaymentStatus.SUCCESS) {
-            throw new RuntimeException("Payment already completed for this booking");
+            throw new BookingException("Payment already completed for this booking");
         }
 
         // Generate unique transaction ID
@@ -73,8 +75,7 @@ public class PaymentService {
                     transactionId,
                     paymentRequest.amount(),
                     paymentRequest.paymentMethod(),
-                    paymentRequest.paymentDetails()
-            );
+                    paymentRequest.paymentDetails());
 
             // Update payment status on success
             payment.setStatus(Payment.PaymentStatus.SUCCESS);
@@ -93,7 +94,7 @@ public class PaymentService {
             paymentRepository.save(payment);
 
             log.error("Payment failed for transaction ID: {}", transactionId, e);
-            throw new RuntimeException("Payment processing failed: " + e.getMessage());
+            throw new BookingException("Payment processing failed: " + e.getMessage());
         }
 
         return convertToResponseDTO(payment);
@@ -103,19 +104,19 @@ public class PaymentService {
      * Initiates a refund for a payment.
      *
      * @param transactionId the transaction ID of the payment to refund
-     * @param refundAmount the amount to refund (null for full refund)
+     * @param refundAmount  the amount to refund (null for full refund)
      * @return PaymentResponseDTO containing refund details
-     * @throws RuntimeException if refund processing fails
+     * @throws BookingException if refund processing fails
      */
     public PaymentResponse refundPayment(String transactionId, BigDecimal refundAmount) {
         log.info("Refunding payment with transaction ID: {}", transactionId);
 
         Payment payment = paymentRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with transaction ID: " + transactionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", transactionId));
 
         // Validate payment can be refunded
         if (payment.getStatus() != Payment.PaymentStatus.SUCCESS) {
-            throw new RuntimeException("Payment cannot be refunded. Current status: " + payment.getStatus());
+            throw new BookingException("Payment cannot be refunded. Current status: " + payment.getStatus());
         }
 
         // Use original amount if refund amount not specified
@@ -123,15 +124,14 @@ public class PaymentService {
 
         // Validate refund amount
         if (amountToRefund.compareTo(payment.getAmount()) > 0) {
-            throw new RuntimeException("Refund amount cannot exceed original payment amount");
+            throw new IllegalArgumentException("Refund amount cannot exceed original payment amount");
         }
 
         try {
             // Process refund through gateway
             String refundResponse = paymentGatewayService.processRefund(
                     transactionId,
-                    amountToRefund
-            );
+                    amountToRefund);
 
             // Update payment status
             payment.setStatus(Payment.PaymentStatus.REFUNDED);
@@ -145,7 +145,7 @@ public class PaymentService {
 
         } catch (Exception e) {
             log.error("Refund failed for transaction ID: {}", transactionId, e);
-            throw new RuntimeException("Refund processing failed: " + e.getMessage());
+            throw new BookingException("Refund processing failed: " + e.getMessage());
         }
 
         return convertToResponseDTO(payment);
@@ -156,12 +156,12 @@ public class PaymentService {
      *
      * @param transactionId the transaction ID to search for
      * @return PaymentResponseDTO containing payment details
-     * @throws RuntimeException if payment is not found
+     * @throws ResourceNotFoundException if payment is not found
      */
     public PaymentResponse getPaymentByTransactionId(String transactionId) {
         log.info("Retrieving payment with transaction ID: {}", transactionId);
         Payment payment = paymentRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new RuntimeException("Payment not found for transaction ID: " + transactionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", transactionId));
 
         return convertToResponseDTO(payment);
     }
@@ -171,13 +171,13 @@ public class PaymentService {
      *
      * @param bookingId the booking ID to search for
      * @return PaymentResponseDTO containing payment details
-     * @throws RuntimeException if payment is not found
+     * @throws ResourceNotFoundException if payment is not found
      */
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
         log.info("Retrieving payment for booking ID: {}", bookingId);
 
         Payment payment = paymentRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new RuntimeException("Payment not found for booking ID: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", bookingId));
 
         return convertToResponseDTO(payment);
     }
@@ -201,7 +201,7 @@ public class PaymentService {
      * Retrieves payments within a specific date range.
      *
      * @param startDate the start date and time
-     * @param endDate the end date and time
+     * @param endDate   the end date and time
      * @return List of PaymentResponse
      */
     public List<PaymentResponse> getPaymentsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
@@ -221,10 +221,10 @@ public class PaymentService {
      */
     private Booking validateBookingForPayment(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingId));
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
-            throw new RuntimeException("Booking must be in PENDING status for payment");
+            throw new BookingException("Booking must be in PENDING status for payment");
         }
 
         return booking;
@@ -244,13 +244,13 @@ public class PaymentService {
      * Deletes a payment by its ID.
      *
      * @param paymentId the ID of the payment to delete
-     * @throws RuntimeException if payment not found
+     * @throws ResourceNotFoundException if payment not found
      */
     public void deletePayment(Long paymentId) {
         log.info("Deleting payment with ID: {}", paymentId);
 
         if (!paymentRepository.existsById(paymentId)) {
-            throw new RuntimeException("Payment not found with ID: " + paymentId);
+            throw new ResourceNotFoundException("Payment", paymentId);
         }
 
         paymentRepository.deleteById(paymentId);
@@ -288,8 +288,6 @@ public class PaymentService {
                 payment.getStatus(),
                 payment.getPaymentGatewayResponse(),
                 payment.getCreatedAt(),
-                payment.getUpdatedAt()
-        );
+                payment.getUpdatedAt());
     }
 }
-

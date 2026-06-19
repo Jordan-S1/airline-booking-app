@@ -6,6 +6,8 @@ import com.airlinebookingsystem.dto.RegisterRequest;
 import com.airlinebookingsystem.entity.User;
 import com.airlinebookingsystem.repository.UserRepository;
 import com.airlinebookingsystem.security.JwtService;
+import com.airlinebookingsystem.exception.DuplicateResourceException;
+import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,65 +27,62 @@ import java.util.Map;
 @Transactional
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+        private final UserRepository userRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final JwtService jwtService;
+        private final AuthenticationManager authenticationManager;
 
-    public AuthResponse register(RegisterRequest request) {
-        log.info("Registering new user: {}", request.getEmail());
+        public AuthResponse register(RegisterRequest request) {
+                log.info("Registering new user: {}", request.getEmail());
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already registered: " + request.getEmail());
+                if (userRepository.existsByEmail(request.getEmail())) {
+                        throw new DuplicateResourceException("Email", request.getEmail());
+                }
+
+                User user = User.builder()
+                                .firstName(request.getFirstName())
+                                .lastName(request.getLastName())
+                                .email(request.getEmail())
+                                .password(passwordEncoder.encode(request.getPassword()))
+                                .phoneNumber(request.getPhoneNumber())
+                                .role(User.Role.CUSTOMER)
+                                .build();
+
+                userRepository.save(user);
+                log.info("User registered successfully: {}", user.getEmail());
+
+                String token = jwtService.generateToken(
+                                Map.of("role", user.getRole().name(), "userId", user.getId()),
+                                user);
+
+                return buildAuthResponse(user, token);
         }
 
-        User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .phoneNumber(request.getPhoneNumber())
-                .role(User.Role.CUSTOMER)
-                .build();
+        public AuthResponse login(LoginRequest request) {
+                log.info("Login attempt for: {}", request.getEmail());
 
-        userRepository.save(user);
-        log.info("User registered successfully: {}", user.getEmail());
+                authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
-        String token = jwtService.generateToken(
-                Map.of("role", user.getRole().name(), "userId", user.getId()),
-                user
-        );
+                User user = userRepository.findByEmail(request.getEmail())
+                                .orElseThrow(() -> new ResourceNotFoundException("User", request.getEmail()));
 
-        return buildAuthResponse(user, token);
-    }
+                String token = jwtService.generateToken(
+                                Map.of("role", user.getRole().name(), "userId", user.getId()),
+                                user);
 
-    public AuthResponse login(LoginRequest request) {
-        log.info("Login attempt for: {}", request.getEmail());
+                log.info("Login successful: {}", user.getEmail());
+                return buildAuthResponse(user, token);
+        }
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        String token = jwtService.generateToken(
-                Map.of("role", user.getRole().name(), "userId", user.getId()),
-                user
-        );
-
-        log.info("Login successful: {}", user.getEmail());
-        return buildAuthResponse(user, token);
-    }
-
-    private AuthResponse buildAuthResponse(User user, String token) {
-        return AuthResponse.builder()
-                .token(token)
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole().name())
-                .userId(user.getId())
-                .build();
-    }
+        private AuthResponse buildAuthResponse(User user, String token) {
+                return AuthResponse.builder()
+                                .token(token)
+                                .email(user.getEmail())
+                                .firstName(user.getFirstName())
+                                .lastName(user.getLastName())
+                                .role(user.getRole().name())
+                                .userId(user.getId())
+                                .build();
+        }
 }

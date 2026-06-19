@@ -31,12 +31,8 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
-        } catch (RuntimeException e) {
-            log.warn("Registration failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        log.info("POST /auth/register - {}", request.getEmail());
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     /**
@@ -46,11 +42,7 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            return ResponseEntity.ok(authService.login(request));
-        } catch (Exception e) {
-            log.warn("Login failed for {}: {}", request.getEmail(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+        log.info("POST /auth/login — {}", request.getEmail());
+        return ResponseEntity.ok(authService.login(request));
     }
 }

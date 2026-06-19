@@ -2,6 +2,8 @@ package com.airlinebookingsystem.service;
 
 import com.airlinebookingsystem.entity.User;
 import com.airlinebookingsystem.repository.UserRepository;
+import com.airlinebookingsystem.exception.DuplicateResourceException;
+import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -37,7 +39,7 @@ public class UserService implements UserDetailsService {
 
     public User createUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new DuplicateResourceException("User email", user.getEmail());
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -46,7 +48,7 @@ public class UserService implements UserDetailsService {
 
     public User updateUser(Long id, User userDetails) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
         user.setFirstName(userDetails.getFirstName());
         user.setLastName(userDetails.getLastName());

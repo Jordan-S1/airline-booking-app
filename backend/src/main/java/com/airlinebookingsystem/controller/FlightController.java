@@ -5,6 +5,7 @@ import com.airlinebookingsystem.dto.FlightSearchResponse;
 import com.airlinebookingsystem.dto.FlightSearchResult;
 import com.airlinebookingsystem.entity.Flight;
 import com.airlinebookingsystem.service.FlightService;
+import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,8 @@ import java.util.Optional;
 
 /**
  * REST Controller for managing flight operations in the airline booking system.
- * Provides endpoints for flight search, CRUD operations, and flight-specific queries.
+ * Provides endpoints for flight search, CRUD operations, and flight-specific
+ * queries.
  */
 @RestController
 @RequestMapping("api/v1/flights")
@@ -36,14 +38,8 @@ public class FlightController {
      */
     @GetMapping
     public ResponseEntity<List<Flight>> getAllFlights() {
-        log.info("GET request received for all flights");
-        try {
-            List<Flight> flights = flightService.getAllFlights();
-            return ResponseEntity.ok(flights);
-        } catch (Exception e) {
-            log.error("Error fetching all flights: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("GET /flights");
+        return ResponseEntity.ok(flightService.getAllFlights());
     }
 
     /**
@@ -54,15 +50,9 @@ public class FlightController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<Flight> getFlightById(@PathVariable Long id) {
-        log.info("GET request received for flight with ID: {}", id);
-        try {
-            Optional<Flight> flight = flightService.getFlightById(id);
-            return flight.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            log.error("Error fetching flight with ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("GET /flights/{}", id);
+        return ResponseEntity.ok(flightService.getFlightById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Flight", id)));
     }
 
     /**
@@ -73,15 +63,9 @@ public class FlightController {
      */
     @GetMapping("/number/{flightNumber}")
     public ResponseEntity<Flight> getFlightByNumber(@PathVariable @NotBlank String flightNumber) {
-        log.info("GET request received for flight with number: {}", flightNumber);
-        try {
-            Optional<Flight> flight = flightService.getFlightByNumber(flightNumber);
-            return flight.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            log.error("Error fetching flight with number {}: {}", flightNumber, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("GET /flights/number/{}", flightNumber);
+        return ResponseEntity.ok(flightService.getFlightByNumber(flightNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Flight", flightNumber)));
     }
 
     /**
@@ -94,36 +78,21 @@ public class FlightController {
      * - returnDate: Return date (optional, for round-trip)
      * - passengers: Number of passengers (optional, defaults to 1)
      * - seatClass: Seat class preference (optional, defaults to "ECONOMY")
-     * - directFlightsOnly: Filter for direct flights only (optional, defaults to false)
+     * - directFlightsOnly: Filter for direct flights only (optional, defaults to
+     * false)
      *
      * @param request the FlightSearchRequest DTO with search criteria
-     * @return ResponseEntity containing FlightSearchResult with outbound and optional return flights
+     * @return ResponseEntity containing FlightSearchResult with outbound and
+     *         optional return flights
      */
     @PostMapping("/search")
     public ResponseEntity<FlightSearchResult> searchFlights(@Valid @RequestBody FlightSearchRequest request) {
-        log.info("POST request received for flight search from {} to {} on {} (passengers: {}, class: {}, direct only: {})",
+        log.info(
+                "POST /flights/search: {} -> {} on {}",
                 request.departureAirport(),
                 request.arrivalAirport(),
-                request.departureDate(),
-                request.passengers(),
-                request.seatClass(),
-                request.directFlightsOnly());
-        try {
-            FlightSearchResult searchResult = flightService.searchFlights(request);
-            log.info("Flight search completed: {} outbound flights, {} return flights",
-                    searchResult.outboundFlights().size(),
-                    searchResult.returnFlights() != null ? searchResult.returnFlights().size() : 0);
-            return ResponseEntity.ok(searchResult);
-        } catch (RuntimeException e) {
-            log.error("Error searching flights: {}", e.getMessage());
-            if (e.getMessage().contains("not found")) {
-                return ResponseEntity.badRequest().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (Exception e) {
-            log.error("Unexpected error searching flights: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+                request.departureDate());
+        return ResponseEntity.ok(flightService.searchFlights(request));
     }
 
     /**
@@ -133,38 +102,23 @@ public class FlightController {
      */
     @GetMapping("/upcoming")
     public ResponseEntity<List<FlightSearchResponse>> getUpcomingFlights() {
-        log.info("GET request received for upcoming flights");
-        try {
-            List<FlightSearchResponse> upcomingFlights = flightService.getUpcomingFlights();
-            return ResponseEntity.ok(upcomingFlights);
-        } catch (Exception e) {
-            log.error("Error fetching upcoming flights: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("GET /flights/upcoming");
+        return ResponseEntity.ok(flightService.getUpcomingFlights());
     }
 
     /**
      * Retrieves all flights operated by a specific airline using airline code.
      *
-     * @param airlineCode the code of the airline (e.g., "AA", "DL", "UA") - must not be blank
-     * @return ResponseEntity containing a list of FlightSearchResponse DTOs for the specified airline
+     * @param airlineCode the code of the airline (e.g., "AA", "DL", "UA") - must
+     *                    not be blank
+     * @return ResponseEntity containing a list of FlightSearchResponse DTOs for the
+     *         specified airline
      */
     @GetMapping("/airline/{airlineCode}")
-    public ResponseEntity<List<FlightSearchResponse>> getFlightsByAirlineCode(@PathVariable @NotBlank String airlineCode) {
-        log.info("GET request received for flights by airline code: {}", airlineCode);
-        try {
-            List<FlightSearchResponse> flights = flightService.getFlightsByAirlineCode(airlineCode);
-            return ResponseEntity.ok(flights);
-        } catch (RuntimeException e) {
-            log.error("Error fetching flights for airline {}: {}", airlineCode, e.getMessage());
-            if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            log.error("Unexpected error fetching flights for airline {}: {}", airlineCode, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    public ResponseEntity<List<FlightSearchResponse>> getFlightsByAirlineCode(
+            @PathVariable @NotBlank String airlineCode) {
+        log.info("GET /flights/airline/{}", airlineCode);
+        return ResponseEntity.ok(flightService.getFlightsByAirlineCode(airlineCode));
     }
 
     /**
@@ -175,20 +129,8 @@ public class FlightController {
      */
     @PostMapping
     public ResponseEntity<Flight> createFlight(@Valid @RequestBody Flight flight) {
-        log.info("POST request received to create flight with number: {}", flight.getFlightNumber());
-        try {
-            Flight createdFlight = flightService.createFlight(flight);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdFlight);
-        } catch (RuntimeException e) {
-            log.error("Error creating flight: {}", e.getMessage());
-            if (e.getMessage().contains("already exists")) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (Exception e) {
-            log.error("Unexpected error creating flight: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("POST /flights: {}", flight.getFlightNumber());
+        return ResponseEntity.status(HttpStatus.CREATED).body(flightService.createFlight(flight));
     }
 
     /**
@@ -200,21 +142,9 @@ public class FlightController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<Flight> updateFlight(@PathVariable Long id,
-                                               @Valid @RequestBody Flight flightDetails) {
-        log.info("PUT request received to update flight with ID: {}", id);
-        try {
-            Flight updatedFlight = flightService.updateFlight(id, flightDetails);
-            return ResponseEntity.ok(updatedFlight);
-        } catch (RuntimeException e) {
-            log.error("Error updating flight with ID {}: {}", id, e.getMessage());
-            if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (Exception e) {
-            log.error("Unexpected error updating flight with ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+            @Valid @RequestBody Flight flightDetails) {
+        log.info("PUT /flights/{}", id);
+        return ResponseEntity.ok(flightService.updateFlight(id, flightDetails));
     }
 
     /**
@@ -225,19 +155,8 @@ public class FlightController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFlight(@PathVariable Long id) {
-        log.info("DELETE request received for flight with ID: {}", id);
-        try {
-            flightService.deleteFlight(id);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            log.error("Error deleting flight with ID {}: {}", id, e.getMessage());
-            if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (Exception e) {
-            log.error("Unexpected error deleting flight with ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("DELETE /flights/{}", id);
+        flightService.deleteFlight(id);
+        return ResponseEntity.noContent().build();
     }
 }

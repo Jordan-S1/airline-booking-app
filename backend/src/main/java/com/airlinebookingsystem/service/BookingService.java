@@ -4,6 +4,8 @@ import com.airlinebookingsystem.dto.BookingRequest;
 import com.airlinebookingsystem.dto.BookingResponse;
 import com.airlinebookingsystem.dto.PassengerResponse;
 import com.airlinebookingsystem.entity.*;
+import com.airlinebookingsystem.exception.BookingException;
+import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import com.airlinebookingsystem.repository.BookingRepository;
 import com.airlinebookingsystem.repository.FlightRepository;
 import com.airlinebookingsystem.repository.UserRepository;
@@ -34,18 +36,19 @@ public class BookingService {
      * @param request the booking request containing flight and passenger details
      * @param userId  the ID of the user making the booking
      * @return BookingResponse containing the created booking details
-     * @throws RuntimeException if flight or user is not found, or if insufficient seats are available
+     * @throws ResourceNotFoundException if flight or user is not found, or if
+     *                                   insufficient seats are available
      */
     public BookingResponse createBooking(BookingRequest request, Long userId) {
         log.info("Creating booking for user {} and flight {}", userId, request.flightId());
 
         // Validate user
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         // Validate flight
         Flight flight = flightRepository.findById(request.flightId())
-                .orElseThrow(() -> new RuntimeException("Flight not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Flight", request.flightId()));
 
         // Check seat availability based on seat class
         validateSeatAvailability(flight, request.seatClass(), request.passengers().size());
@@ -67,23 +70,17 @@ public class BookingService {
         // Save booking first to get ID
         booking = bookingRepository.save(booking);
 
-        try {
-            // Create passengers using PassengerService
-            List<PassengerResponse> createdPassengers = passengerService.createPassengers(request.passengers(), booking.getId());
-            log.info("Created {} passengers for booking {}", createdPassengers.size(), booking.getBookingReference());
+        // Create passengers using PassengerService
+        List<PassengerResponse> createdPassengers = passengerService.createPassengers(request.passengers(),
+                booking.getId());
+        log.info("Created {} passengers for booking {}", createdPassengers.size(), booking.getBookingReference());
 
-            // Update flight availability based on seat class
-            updateFlightSeatAvailability(flight, request.seatClass(), request.passengers().size(), false);
-            flightRepository.save(flight);
+        // Update flight availability based on seat class
+        updateFlightSeatAvailability(flight, request.seatClass(), request.passengers().size(), false);
+        flightRepository.save(flight);
 
-            log.info("Booking created successfully with reference: {}", booking.getBookingReference());
-            return mapToBookingResponse(booking);
-        } catch (Exception e) {
-            // Rollback booking creation if passenger creation fails
-            log.error("Error creating passengers for booking {}, rolling back", booking.getBookingReference(), e);
-            bookingRepository.delete(booking);
-            throw new RuntimeException("Failed to create booking: " + e.getMessage(), e);
-        }
+        log.info("Booking created successfully: {}", booking.getBookingReference());
+        return mapToBookingResponse(booking);
     }
 
     /**
@@ -91,12 +88,12 @@ public class BookingService {
      *
      * @param bookingReference the booking reference to search for
      * @return BookingResponse containing the booking details
-     * @throws RuntimeException if a booking is not found
+     * @throws ResourceNotFoundException if the booking is not found
      */
     public BookingResponse getBookingByReference(String bookingReference) {
-        log.info("Retrieving booking with reference: {}", bookingReference);
+        log.info("Retrieving booking: {}", bookingReference);
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
         return mapToBookingResponse(booking);
     }
 
@@ -119,19 +116,19 @@ public class BookingService {
      *
      * @param bookingReference the booking reference to confirm
      * @return BookingResponse with updated status
-     * @throws RuntimeException if a booking is not found
+     * @throws ResourceNotFoundException if the booking is not found
      */
     public BookingResponse confirmBooking(String bookingReference) {
-        log.info("Confirming booking with reference: {}", bookingReference);
+        log.info("Confirming booking: {}", bookingReference);
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
 
         if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
             log.warn("Booking {} is already confirmed", bookingReference);
             return mapToBookingResponse(booking);
         }
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
-            throw new RuntimeException("Cannot confirm a cancelled booking");
+            throw new BookingException("Cannot confirm a cancelled booking: " + bookingReference);
         }
 
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
@@ -146,15 +143,16 @@ public class BookingService {
      *
      * @param bookingReference the booking reference to cancel
      * @return BookingResponse with updated status
-     * @throws RuntimeException if a booking is not found or already canceled
+     * @throws ResourceNotFoundException if the booking is not found or already
+     *                                   cancelled
      */
     public BookingResponse cancelBooking(String bookingReference) {
-        log.info("Cancelling booking with reference: {}", bookingReference);
+        log.info("Cancelling booking: {}", bookingReference);
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
-            throw new RuntimeException("Booking is already cancelled");
+            throw new BookingException("Booking is already cancelled: " + bookingReference);
         }
 
         // Update booking status
@@ -178,11 +176,15 @@ public class BookingService {
      */
     public List<BookingResponse> getBookingsByStatus(String status) {
         log.info("Retrieving bookings with status: {}", status);
-        Booking.BookingStatus bookingStatus = Booking.BookingStatus.valueOf(status.toUpperCase());
-        List<Booking> bookings = bookingRepository.findByStatus(bookingStatus);
-        return bookings.stream()
-                .map(this::mapToBookingResponse)
-                .collect(Collectors.toList());
+        try {
+            Booking.BookingStatus bookingStatus = Booking.BookingStatus.valueOf(status.toUpperCase());
+            List<Booking> bookings = bookingRepository.findByStatus(bookingStatus);
+            return bookings.stream()
+                    .map(this::mapToBookingResponse)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid booking status: " + status);
+        }
     }
 
     /**
@@ -194,7 +196,7 @@ public class BookingService {
     public List<PassengerResponse> getBookingPassengers(String bookingReference) {
         log.info("Retrieving passengers for booking: {}", bookingReference);
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
         return passengerService.getPassengersByBookingId(booking.getId());
     }
 
@@ -202,18 +204,18 @@ public class BookingService {
      * Updates an existing booking (limited updates allowed).
      *
      * @param bookingReference the booking reference to update
-     * @param request new booking details
+     * @param request          new booking details
      * @return updated BookingResponse
      */
     public BookingResponse updateBooking(String bookingReference, BookingRequest request) {
-        log.info("Updating booking with reference: {}", bookingReference);
+        log.info("Updating booking: {}", bookingReference);
 
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
-                .orElseThrow(() -> new RuntimeException("Booking not found with reference: " + bookingReference));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
 
         // Only allow updates for pending bookings
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
-            throw new RuntimeException("Can only update pending bookings");
+            throw new BookingException("Can only update PENDING bookings, current status: " + booking.getStatus());
         }
 
         // Update seat class if changed
@@ -259,17 +261,18 @@ public class BookingService {
     private String generateBookingReference() {
         String reference;
         do {
-            reference = "BK" + System.currentTimeMillis() + 
-                       String.format("%04d", new Random().nextInt(10000));
+            reference = "BK" + System.currentTimeMillis() +
+                    String.format("%04d", new Random().nextInt(10000));
         } while (bookingRepository.existsByBookingReference(reference));
         return reference;
     }
 
     /**
-     * Calculates the total amount for a booking based on seat class and number of passengers.
+     * Calculates the total amount for a booking based on seat class and number of
+     * passengers.
      *
-     * @param flight           the flight being booked
-     * @param seatClass        the seat class requested
+     * @param flight             the flight being booked
+     * @param seatClass          the seat class requested
      * @param numberOfPassengers the number of passengers
      * @return the total amount for the booking
      */
@@ -300,7 +303,6 @@ public class BookingService {
                 booking.getSeatClass().name(),
                 booking.getUser().getEmail(),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt()
-        );
+                booking.getUpdatedAt());
     }
 }
