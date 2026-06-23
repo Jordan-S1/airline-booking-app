@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -26,6 +27,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "bookings")
 public class Flight {
 
     @Id
@@ -105,6 +107,7 @@ public class Flight {
      * Represents the current status of the flight.
      * By default, the status is set to SCHEDULED.
      */
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FlightStatus status = FlightStatus.SCHEDULED;

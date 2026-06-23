@@ -1,8 +1,8 @@
 package com.airlinebookingsystem.service;
 
-import com.airlinebookingsystem.dto.BookingRequest;
-import com.airlinebookingsystem.dto.BookingResponse;
-import com.airlinebookingsystem.dto.PassengerResponse;
+import com.airlinebookingsystem.dto.booking.BookingRequest;
+import com.airlinebookingsystem.dto.booking.BookingResponse;
+import com.airlinebookingsystem.dto.passenger.PassengerResponse;
 import com.airlinebookingsystem.entity.*;
 import com.airlinebookingsystem.exception.BookingException;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
@@ -12,6 +12,7 @@ import com.airlinebookingsystem.repository.UserRepository;
 import com.airlinebookingsystem.util.SeatClassUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +40,7 @@ public class BookingService {
      * @throws ResourceNotFoundException if flight or user is not found, or if
      *                                   insufficient seats are available
      */
-    public BookingResponse createBooking(BookingRequest request, Long userId) {
+    public BookingResponse createBooking(BookingRequest request, @NonNull Long userId) {
         log.info("Creating booking for user {} and flight {}", userId, request.flightId());
 
         // Validate user
@@ -47,7 +48,7 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         // Validate flight
-        Flight flight = flightRepository.findById(request.flightId())
+        Flight flight = flightRepository.findById(Objects.requireNonNull(request.flightId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Flight", request.flightId()));
 
         // Check seat availability based on seat class
@@ -68,16 +69,16 @@ public class BookingService {
                 .build();
 
         // Save booking first to get ID
-        booking = bookingRepository.save(booking);
+        booking = bookingRepository.save(Objects.requireNonNull(booking));
 
         // Create passengers using PassengerService
         List<PassengerResponse> createdPassengers = passengerService.createPassengers(request.passengers(),
-                booking.getId());
+                Objects.requireNonNull(booking.getId()));
         log.info("Created {} passengers for booking {}", createdPassengers.size(), booking.getBookingReference());
 
         // Update flight availability based on seat class
         updateFlightSeatAvailability(flight, request.seatClass(), request.passengers().size(), false);
-        flightRepository.save(flight);
+        flightRepository.save(Objects.requireNonNull(flight));
 
         log.info("Booking created successfully: {}", booking.getBookingReference());
         return mapToBookingResponse(booking);
@@ -103,7 +104,7 @@ public class BookingService {
      * @param userId the ID of the user
      * @return List of BookingResponse objects
      */
-    public List<BookingResponse> getBookingsByUserId(Long userId) {
+    public List<BookingResponse> getBookingsByUserId(@NonNull Long userId) {
         log.info("Retrieving bookings for user: {}", userId);
         List<Booking> bookings = bookingRepository.findByUserId(userId);
         return bookings.stream()
@@ -162,7 +163,7 @@ public class BookingService {
         // Restore flight seat availability
         Flight flight = booking.getFlight();
         updateFlightSeatAvailability(flight, booking.getSeatClass().name(), booking.getNumberOfPassengers(), true);
-        flightRepository.save(flight);
+        flightRepository.save(Objects.requireNonNull(flight));
 
         log.info("Booking {} cancelled successfully", bookingReference);
         return mapToBookingResponse(booking);
@@ -229,10 +230,10 @@ public class BookingService {
             booking.setSeatClass(Booking.SeatClass.valueOf(request.seatClass().toUpperCase()));
             booking.setTotalAmount(calculateTotalAmount(flight, request.seatClass(), request.passengers().size()));
 
-            flightRepository.save(flight);
+            flightRepository.save(Objects.requireNonNull(flight));
         }
 
-        booking = bookingRepository.save(booking);
+        booking = bookingRepository.save(Objects.requireNonNull(booking));
         log.info("Booking {} updated successfully", bookingReference);
         return mapToBookingResponse(booking);
     }

@@ -1,3 +1,5 @@
+package com.airlinebookingsystem.entity;
+
 /**
  * Represents an airport entity in the airline booking system.
  * This entity stores essential information about airports including their IATA codes,
@@ -5,13 +7,13 @@
  *
  * @since 1.0
  */
-package com.airlinebookingsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -24,6 +26,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"departureFlights", "arrivalFlights"})
 public class Airport {
 
     /**

@@ -1,17 +1,16 @@
 package com.airlinebookingsystem.controller;
 
 import com.airlinebookingsystem.entity.Airline;
-import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import com.airlinebookingsystem.service.AirlineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * REST Controller for managing airline operations in the airline booking
@@ -56,10 +55,9 @@ public class AirlineController {
      * @return ResponseEntity containing the airline if found, or 404 if not found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Airline> getAirlineById(@PathVariable Long id) {
+    public ResponseEntity<Airline> getAirlineById(@PathVariable @NonNull Long id) {
         log.info("GET /airlines/{}", id);
-        return ResponseEntity.ok(airlineService.getAirlineById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Airline", id)));
+        return ResponseEntity.ok(airlineService.getAirlineById(id));
     }
 
     /**
@@ -71,8 +69,7 @@ public class AirlineController {
     @GetMapping("/code/{code}")
     public ResponseEntity<Airline> getAirlineByCode(@PathVariable String code) {
         log.info("GET /airlines/code/{}", code);
-        return ResponseEntity.ok(airlineService.getAirlineByCode(code)
-                .orElseThrow(() -> new ResourceNotFoundException("Airline", code)));
+        return ResponseEntity.ok(airlineService.getAirlineByCode(code));
     }
 
     /**
@@ -107,7 +104,7 @@ public class AirlineController {
      * @return ResponseEntity containing the updated airline
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Airline> updateAirline(@PathVariable Long id,
+    public ResponseEntity<Airline> updateAirline(@PathVariable @NonNull Long id,
             @Valid @RequestBody Airline airlineDetails) {
         log.info("PUT /airlines/{}", id);
         return ResponseEntity.ok(airlineService.updateAirline(id, airlineDetails));
@@ -120,7 +117,7 @@ public class AirlineController {
      * @return ResponseEntity with status 204 if successful
      */
     @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<Void> deactivateAirline(@PathVariable Long id) {
+    public ResponseEntity<Void> deactivateAirline(@PathVariable @NonNull Long id) {
         log.info("PATCH /airlines/{}/deactivate", id);
         airlineService.deactivateAirline(id);
         return ResponseEntity.noContent().build();
@@ -133,7 +130,7 @@ public class AirlineController {
      * @return ResponseEntity with status 204 if successful
      */
     @PatchMapping("/{id}/reactivate")
-    public ResponseEntity<Void> reactivateAirline(@PathVariable Long id) {
+    public ResponseEntity<Void> reactivateAirline(@PathVariable @NonNull Long id) {
         log.info("PATCH /airlines/{}/reactivate", id);
         airlineService.reactivateAirline(id);
         return ResponseEntity.noContent().build();
@@ -147,7 +144,7 @@ public class AirlineController {
      * @return ResponseEntity with status 204 if successful
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAirline(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteAirline(@PathVariable @NonNull Long id) {
         log.info("DELETE /airlines/{}", id);
         airlineService.deleteAirline(id);
         return ResponseEntity.noContent().build();

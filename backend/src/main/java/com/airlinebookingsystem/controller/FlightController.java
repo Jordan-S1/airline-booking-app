@@ -1,11 +1,10 @@
 package com.airlinebookingsystem.controller;
 
-import com.airlinebookingsystem.dto.FlightSearchRequest;
-import com.airlinebookingsystem.dto.FlightSearchResponse;
-import com.airlinebookingsystem.dto.FlightSearchResult;
+import com.airlinebookingsystem.dto.flight.FlightSearchRequest;
+import com.airlinebookingsystem.dto.flight.FlightSearchResponse;
+import com.airlinebookingsystem.dto.flight.FlightSearchResult;
 import com.airlinebookingsystem.entity.Flight;
 import com.airlinebookingsystem.service.FlightService;
-import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.lang.NonNull;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * REST Controller for managing flight operations in the airline booking system.
@@ -49,10 +48,9 @@ public class FlightController {
      * @return ResponseEntity containing the flight if found, or 404 if not found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Flight> getFlightById(@PathVariable Long id) {
+    public ResponseEntity<Flight> getFlightById(@PathVariable @NonNull Long id) {
         log.info("GET /flights/{}", id);
-        return ResponseEntity.ok(flightService.getFlightById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Flight", id)));
+        return ResponseEntity.ok(flightService.getFlightById(id));
     }
 
     /**
@@ -64,8 +62,7 @@ public class FlightController {
     @GetMapping("/number/{flightNumber}")
     public ResponseEntity<Flight> getFlightByNumber(@PathVariable @NotBlank String flightNumber) {
         log.info("GET /flights/number/{}", flightNumber);
-        return ResponseEntity.ok(flightService.getFlightByNumber(flightNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Flight", flightNumber)));
+        return ResponseEntity.ok(flightService.getFlightByNumber(flightNumber));
     }
 
     /**
@@ -141,7 +138,7 @@ public class FlightController {
      * @return ResponseEntity containing the updated flight
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Flight> updateFlight(@PathVariable Long id,
+    public ResponseEntity<Flight> updateFlight(@PathVariable @NonNull Long id,
             @Valid @RequestBody Flight flightDetails) {
         log.info("PUT /flights/{}", id);
         return ResponseEntity.ok(flightService.updateFlight(id, flightDetails));
@@ -154,7 +151,7 @@ public class FlightController {
      * @return ResponseEntity with status 204 if successful
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFlight(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteFlight(@PathVariable @NonNull Long id) {
         log.info("DELETE /flights/{}", id);
         flightService.deleteFlight(id);
         return ResponseEntity.noContent().build();

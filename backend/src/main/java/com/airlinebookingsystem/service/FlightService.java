@@ -1,8 +1,8 @@
 package com.airlinebookingsystem.service;
 
-import com.airlinebookingsystem.dto.FlightSearchRequest;
-import com.airlinebookingsystem.dto.FlightSearchResponse;
-import com.airlinebookingsystem.dto.FlightSearchResult;
+import com.airlinebookingsystem.dto.flight.FlightSearchRequest;
+import com.airlinebookingsystem.dto.flight.FlightSearchResponse;
+import com.airlinebookingsystem.dto.flight.FlightSearchResult;
 import com.airlinebookingsystem.entity.Airport;
 import com.airlinebookingsystem.entity.Airline;
 import com.airlinebookingsystem.entity.Booking;
@@ -15,6 +15,8 @@ import com.airlinebookingsystem.exception.DuplicateResourceException;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +24,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -44,6 +46,7 @@ public class FlightService {
      *
      * @return a list of all flights
      */
+    @Transactional(readOnly = true)
     public List<Flight> getAllFlights() {
         log.info("Fetching all flights");
         return flightRepository.findAll();
@@ -53,21 +56,28 @@ public class FlightService {
      * Retrieves a flight by its ID.
      *
      * @param id the ID of the flight to retrieve
-     * @return an Optional containing the flight if found, or empty if not found
+     * @return the flight if found
+     * @throws ResourceNotFoundException if the flight is not found
      */
-    public Optional<Flight> getFlightById(Long id) {
-        return flightRepository.findById(id);
+    @Transactional(readOnly = true)
+    public Flight getFlightById(@NonNull Long id) {
+        log.info("Fetching flight with ID: {}", id);
+        return flightRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Flight", id));
     }
 
     /**
      * Retrieves a flight by its flight number.
      *
      * @param flightNumber the flight number to search for
-     * @return an Optional containing the flight if found, or empty if not found
+     * @return the flight if found
+     * @throws ResourceNotFoundException if the flight is not found
      */
-    public Optional<Flight> getFlightByNumber(String flightNumber) {
+    @Transactional(readOnly = true)
+    public Flight getFlightByNumber(String flightNumber) {
         log.info("Fetching flight with number: {}", flightNumber);
-        return flightRepository.findByFlightNumber(flightNumber);
+        return flightRepository.findByFlightNumber(flightNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Flight", flightNumber));
     }
 
     /**
@@ -81,6 +91,7 @@ public class FlightService {
      * @throws ResourceNotFoundException if departure or arrival airport is not
      *                                   found
      */
+    @Transactional(readOnly = true)
     public FlightSearchResult searchFlights(FlightSearchRequest request) {
         log.info("Searching flights from {} to {} on {} for {} passengers in {} class",
                 request.departureAirport(),
@@ -232,7 +243,7 @@ public class FlightService {
 
         // Validate and fetch the airline
         if (flight.getAirline() != null && flight.getAirline().getId() != null) {
-            Airline airline = airlineRepository.findById(flight.getAirline().getId())
+            Airline airline = airlineRepository.findById(Objects.requireNonNull(flight.getAirline().getId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Airline", flight.getAirline().getId()));
             flight.setAirline(airline);
         } else {
@@ -241,7 +252,7 @@ public class FlightService {
 
         // Validate and fetch departure airport
         if (flight.getDepartureAirport() != null && flight.getDepartureAirport().getId() != null) {
-            Airport departureAirport = airportRepository.findById(flight.getDepartureAirport().getId())
+            Airport departureAirport = airportRepository.findById(Objects.requireNonNull(flight.getDepartureAirport().getId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Airport", flight.getDepartureAirport().getId()));
             flight.setDepartureAirport(departureAirport);
         } else {
@@ -250,7 +261,7 @@ public class FlightService {
 
         // Validate and fetch arrival airport
         if (flight.getArrivalAirport() != null && flight.getArrivalAirport().getId() != null) {
-            Airport arrivalAirport = airportRepository.findById(flight.getArrivalAirport().getId())
+            Airport arrivalAirport = airportRepository.findById(Objects.requireNonNull(flight.getArrivalAirport().getId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Airport", flight.getArrivalAirport().getId()));
             flight.setArrivalAirport(arrivalAirport);
         } else {
@@ -277,7 +288,7 @@ public class FlightService {
      * @return the updated flight
      * @throws ResourceNotFoundException if the flight is not found
      */
-    public Flight updateFlight(Long id, Flight flightDetails) {
+    public Flight updateFlight(@NonNull Long id, Flight flightDetails) {
         log.info("Updating flight with ID: {}", id);
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Flight", id));
@@ -298,7 +309,7 @@ public class FlightService {
      * @param id the ID of the flight to delete
      * @throws ResourceNotFoundException if flight is not found
      */
-    public void deleteFlight(Long id) {
+    public void deleteFlight(@NonNull Long id) {
         log.info("Deleting flight with ID: {}", id);
         // Check if a flight exists before deletion
         if (!flightRepository.existsById(id)) {
@@ -313,6 +324,7 @@ public class FlightService {
      *
      * @return a list of upcoming flights
      */
+    @Transactional(readOnly = true)
     public List<FlightSearchResponse> getUpcomingFlights() {
         LocalDateTime now = LocalDateTime.now();
         log.info("Fetching upcoming flights after: {}", now);
@@ -329,6 +341,7 @@ public class FlightService {
      * @return a list of flights operated by the specified airline
      * @throws ResourceNotFoundException if the airline is not found
      */
+    @Transactional(readOnly = true)
     public List<FlightSearchResponse> getFlightsByAirlineCode(String airlineCode) {
 
         String normalizedCode = airlineCode.toUpperCase();

@@ -1,8 +1,8 @@
 package com.airlinebookingsystem.controller;
 
-import com.airlinebookingsystem.dto.AuthResponse;
-import com.airlinebookingsystem.dto.LoginRequest;
-import com.airlinebookingsystem.dto.RegisterRequest;
+import com.airlinebookingsystem.dto.auth.AuthResponse;
+import com.airlinebookingsystem.dto.auth.LoginRequest;
+import com.airlinebookingsystem.dto.auth.RegisterRequest;
 import com.airlinebookingsystem.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

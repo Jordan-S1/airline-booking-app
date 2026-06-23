@@ -1,4 +1,4 @@
-package com.airlinebookingsystem.dto;
+package com.airlinebookingsystem.dto.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

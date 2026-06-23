@@ -1,7 +1,6 @@
 package com.airlinebookingsystem.service;
 
 import com.airlinebookingsystem.entity.Payment;
-import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -10,7 +9,6 @@ import java.util.Map;
  * Service interface for payment gateway operations.
  * Implement this interface to integrate with different payment providers.
  */
-@Service
 public interface PaymentGatewayService {
 
     /**

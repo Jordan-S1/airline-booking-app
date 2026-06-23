@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "booking")
 public class Payment {
 
     /**
@@ -62,6 +64,7 @@ public class Payment {
     /**
      * Current status of the payment. Defaults to PENDING.
      */
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentStatus status = PaymentStatus.PENDING;

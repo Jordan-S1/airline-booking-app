@@ -1,7 +1,7 @@
 package com.airlinebookingsystem.service;
 
-import com.airlinebookingsystem.dto.PaymentRequest;
-import com.airlinebookingsystem.dto.PaymentResponse;
+import com.airlinebookingsystem.dto.payment.PaymentRequest;
+import com.airlinebookingsystem.dto.payment.PaymentResponse;
 import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Payment;
 import com.airlinebookingsystem.repository.PaymentRepository;
@@ -10,12 +10,15 @@ import com.airlinebookingsystem.exception.BookingException;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,7 +48,7 @@ public class PaymentService {
         log.info("Processing payment for booking ID: {}", paymentRequest.bookingId());
 
         // Validate booking exists and is in valid state
-        Booking booking = validateBookingForPayment(paymentRequest.bookingId());
+        Booking booking = validateBookingForPayment(Objects.requireNonNull(paymentRequest.bookingId()));
 
         // Check if payment already exists for this booking
         Optional<Payment> existingPayment = paymentRepository.findByBookingId(booking.getId());
@@ -67,7 +70,7 @@ public class PaymentService {
                 .build();
 
         // Save payment with pending status
-        payment = paymentRepository.save(payment);
+        payment = paymentRepository.save(Objects.requireNonNull(payment));
 
         try {
             // Process payment through gateway
@@ -158,6 +161,7 @@ public class PaymentService {
      * @return PaymentResponseDTO containing payment details
      * @throws ResourceNotFoundException if payment is not found
      */
+    @Transactional(readOnly = true)
     public PaymentResponse getPaymentByTransactionId(String transactionId) {
         log.info("Retrieving payment with transaction ID: {}", transactionId);
         Payment payment = paymentRepository.findByTransactionId(transactionId)
@@ -173,6 +177,7 @@ public class PaymentService {
      * @return PaymentResponseDTO containing payment details
      * @throws ResourceNotFoundException if payment is not found
      */
+    @Transactional(readOnly = true)
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
         log.info("Retrieving payment for booking ID: {}", bookingId);
 
@@ -188,6 +193,7 @@ public class PaymentService {
      * @param status the payment status to filter by
      * @return List of PaymentResponse
      */
+    @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
         log.info("Retrieving payments with status: {}", status);
 
@@ -204,6 +210,7 @@ public class PaymentService {
      * @param endDate   the end date and time
      * @return List of PaymentResponse
      */
+    @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         log.info("Retrieving payments between {} and {}", startDate, endDate);
 
@@ -219,7 +226,7 @@ public class PaymentService {
      * @param bookingId the booking ID to validate
      * @return the validated Booking entity
      */
-    private Booking validateBookingForPayment(Long bookingId) {
+    private Booking validateBookingForPayment(@NonNull Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingId));
 
@@ -235,6 +242,7 @@ public class PaymentService {
      *
      * @return a list of all payments
      */
+    @Transactional(readOnly = true)
     public List<Payment> getAllPayments() {
         log.debug("Retrieving all payments");
         return paymentRepository.findAll();
@@ -246,7 +254,7 @@ public class PaymentService {
      * @param paymentId the ID of the payment to delete
      * @throws ResourceNotFoundException if payment not found
      */
-    public void deletePayment(Long paymentId) {
+    public void deletePayment(@NonNull Long paymentId) {
         log.info("Deleting payment with ID: {}", paymentId);
 
         if (!paymentRepository.existsById(paymentId)) {

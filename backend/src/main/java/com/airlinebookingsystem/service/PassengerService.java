@@ -1,7 +1,7 @@
 package com.airlinebookingsystem.service;
 
-import com.airlinebookingsystem.dto.PassengerRequest;
-import com.airlinebookingsystem.dto.PassengerResponse;
+import com.airlinebookingsystem.dto.passenger.PassengerRequest;
+import com.airlinebookingsystem.dto.passenger.PassengerResponse;
 import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Passenger;
 import com.airlinebookingsystem.repository.BookingRepository;
@@ -11,6 +11,8 @@ import com.airlinebookingsystem.exception.DuplicateResourceException;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -18,6 +20,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -45,7 +48,7 @@ public class PassengerService {
      * @return PassengerResponse containing the created passenger details
      * @throws ResourceNotFoundException if a booking is not found
      */
-    public PassengerResponse createPassenger(PassengerRequest passengerRequest, Long bookingId) {
+    public PassengerResponse createPassenger(PassengerRequest passengerRequest, @NonNull Long bookingId) {
         log.info("Creating passenger for booking: {}", bookingId);
 
         validatePassengerRequest(passengerRequest);
@@ -60,7 +63,7 @@ public class PassengerService {
         validateBookingForPassengerOperation(booking);
 
         Passenger passenger = buildPassengerFromRequest(passengerRequest, booking);
-        passenger = passengerRepository.save(passenger);
+        passenger = passengerRepository.save(Objects.requireNonNull(passenger));
 
         log.info("Passenger created successfully with ID: {}", passenger.getId());
         return mapToPassengerResponse(passenger);
@@ -73,7 +76,7 @@ public class PassengerService {
      * @param bookingId         the ID of the booking to associate with
      * @return List of PassengerResponse containing the created passengers
      */
-    public List<PassengerResponse> createPassengers(List<PassengerRequest> passengerRequests, Long bookingId) {
+    public List<PassengerResponse> createPassengers(List<PassengerRequest> passengerRequests, @NonNull Long bookingId) {
         log.info("Creating {} passengers for booking: {}", passengerRequests.size(), bookingId);
 
         // Check for duplicate passports within the request
@@ -98,7 +101,8 @@ public class PassengerService {
      * @return PassengerResponse containing the passenger details
      * @throws ResourceNotFoundException if the passenger is not found
      */
-    public PassengerResponse getPassengerById(Long id) {
+    @Transactional(readOnly = true)
+    public PassengerResponse getPassengerById(@NonNull Long id) {
         log.info("Retrieving passenger with ID: {}", id);
         Passenger passenger = passengerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Passenger", id));
@@ -111,6 +115,7 @@ public class PassengerService {
      * @param bookingId the ID of the booking
      * @return List of PassengerResponse objects
      */
+    @Transactional(readOnly = true)
     public List<PassengerResponse> getPassengersByBookingId(Long bookingId) {
         log.info("Retrieving passengers for booking: {}", bookingId);
         List<Passenger> passengers = passengerRepository.findByBookingId(bookingId);
@@ -125,6 +130,7 @@ public class PassengerService {
      * @param flightId the ID of the flight
      * @return List of PassengerResponse objects
      */
+    @Transactional(readOnly = true)
     public List<PassengerResponse> getPassengersByFlightId(Long flightId) {
         log.info("Retrieving passengers for flight: {}", flightId);
         List<Passenger> passengers = passengerRepository.findByFlightId(flightId);
@@ -139,6 +145,7 @@ public class PassengerService {
      * @param passportNumber the passport number to search for
      * @return List of PassengerResponse objects
      */
+    @Transactional(readOnly = true)
     public List<PassengerResponse> getPassengersByPassportNumber(String passportNumber) {
         log.info("Searching passengers by passport number: {}", passportNumber);
         List<Passenger> passengers = passengerRepository.findByPassportNumber(passportNumber);
@@ -152,6 +159,7 @@ public class PassengerService {
      *
      * @return List of all PassengerResponse objects
      */
+    @Transactional(readOnly = true)
     public List<PassengerResponse> getAllPassengers() {
         log.info("Retrieving all passengers");
         List<Passenger> passengers = passengerRepository.findAll();
@@ -166,6 +174,7 @@ public class PassengerService {
      * @param bookingId the booking ID
      * @return count of passengers for the booking
      */
+    @Transactional(readOnly = true)
     public long getPassengerCountByBooking(Long bookingId) {
         return passengerRepository.findByBookingId(bookingId).size();
     }
@@ -178,7 +187,7 @@ public class PassengerService {
      * @return PassengerResponse containing the updated passenger details
      * @throws ResourceNotFoundException if the passenger is not found
      */
-    public PassengerResponse updatePassenger(Long id, PassengerRequest passengerRequest) {
+    public PassengerResponse updatePassenger(@NonNull Long id, PassengerRequest passengerRequest) {
         log.info("Updating passenger with ID: {}", id);
 
         validatePassengerRequest(passengerRequest);
@@ -209,7 +218,7 @@ public class PassengerService {
      * @return PassengerResponse containing the updated passenger details
      * @throws ResourceNotFoundException if the passenger is not found
      */
-    public PassengerResponse assignSeat(Long passengerId, String seatNumber) {
+    public PassengerResponse assignSeat(@NonNull Long passengerId, String seatNumber) {
         log.info("Assigning seat {} to passenger: {}", seatNumber, passengerId);
         Passenger passenger = passengerRepository.findById(passengerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Passenger", passengerId));
@@ -230,7 +239,7 @@ public class PassengerService {
      * @param id the ID of the passenger to delete
      * @throws ResourceNotFoundException if a passenger is not found
      */
-    public void deletePassenger(Long id) {
+    public void deletePassenger(@NonNull Long id) {
         log.info("Deleting passenger with ID: {}", id);
         Passenger passenger = passengerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Passenger", id));

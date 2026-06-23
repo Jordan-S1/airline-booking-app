@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -25,6 +26,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"passengers", "payment"})
 public class Booking {
 
     /**
@@ -69,6 +71,7 @@ public class Booking {
     /**
      * Current status of the booking.
      */
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.PENDING;
@@ -89,7 +92,7 @@ public class Booking {
     /**
      * Payment information associated with the booking.
      */
-    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL)
     private Payment payment;
 
     /**

@@ -1,18 +1,22 @@
 package com.airlinebookingsystem.service;
 
 import com.airlinebookingsystem.entity.Airport;
+import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import com.airlinebookingsystem.repository.AirportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Service class for managing airport-related operations in the airline booking system.
- * Provides methods for retrieving, searching, creating, and deleting airport records.
+ * Service class for managing airport-related operations in the airline booking
+ * system.
+ * Provides methods for retrieving, searching, creating, and deleting airport
+ * records.
  * All operations are transactional and interact with the AirportRepository.
  */
 
@@ -28,6 +32,7 @@ public class AirportService {
      *
      * @return a list of all airports in the system
      */
+    @Transactional(readOnly = true)
     public List<Airport> getAllAirports() {
         log.info("Fetching all airports");
         return airportRepository.findAll();
@@ -37,10 +42,14 @@ public class AirportService {
      * Finds an airport by its code.
      *
      * @param code the airport code to search for (will be converted to uppercase)
-     * @return an Optional containing the airport if found, or empty if not found
+     * @return the airport if found
+     * @throws ResourceNotFoundException if no airport with that code exists
      */
-    public Optional<Airport> getAirportByCode(String code) {
-        return airportRepository.findByCode(code.toUpperCase());
+    @Transactional(readOnly = true)
+    public Airport getAirportByCode(String code) {
+        log.info("Fetching airport with code: {}", code);
+        return airportRepository.findByCode(code.toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Airport", code));
     }
 
     /**
@@ -50,6 +59,7 @@ public class AirportService {
      * @param query the search string to match against airport fields
      * @return a list of airports matching the search criteria
      */
+    @Transactional(readOnly = true)
     public List<Airport> searchAirports(String query) {
         if (query == null || query.trim().isEmpty()) {
             return getAllAirports();
@@ -63,6 +73,7 @@ public class AirportService {
      * @param country the country to search for airports in
      * @return a list of airports in the specified country, ordered by city name
      */
+    @Transactional(readOnly = true)
     public List<Airport> getAirportsByCountry(String country) {
         log.info("Fetching airports for country: {}", country);
         return airportRepository.findByCountryOrderByCity(country);
@@ -84,8 +95,12 @@ public class AirportService {
      * Deletes an airport from the database by its ID.
      *
      * @param id the unique identifier of the airport to delete
+     * @throws ResourceNotFoundException if the airport is not found
      */
-    public void deleteAirport(Long id) {
+    public void deleteAirport(@NonNull Long id) {
+        if (!airportRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Airport", id);
+        }
         airportRepository.deleteById(id);
     }
 }

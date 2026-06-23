@@ -1,8 +1,8 @@
 package com.airlinebookingsystem.service;
 
-import com.airlinebookingsystem.dto.AuthResponse;
-import com.airlinebookingsystem.dto.LoginRequest;
-import com.airlinebookingsystem.dto.RegisterRequest;
+import com.airlinebookingsystem.dto.auth.AuthResponse;
+import com.airlinebookingsystem.dto.auth.LoginRequest;
+import com.airlinebookingsystem.dto.auth.RegisterRequest;
 import com.airlinebookingsystem.entity.User;
 import com.airlinebookingsystem.repository.UserRepository;
 import com.airlinebookingsystem.security.JwtService;
@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Handles user registration and login, returning a signed JWT on success.
@@ -48,7 +49,7 @@ public class AuthService {
                                 .role(User.Role.CUSTOMER)
                                 .build();
 
-                userRepository.save(user);
+                user = userRepository.save(Objects.requireNonNull(user));
                 log.info("User registered successfully: {}", user.getEmail());
 
                 String token = jwtService.generateToken(

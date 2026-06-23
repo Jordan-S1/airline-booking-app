@@ -67,9 +67,7 @@ public class AirportController {
      */
     @GetMapping("/{code}")
     public ResponseEntity<Airport> getAirportByCode(@PathVariable String code) {
-        return airportService.getAirportByCode(code)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(airportService.getAirportByCode(code));
     }
 
     /**
