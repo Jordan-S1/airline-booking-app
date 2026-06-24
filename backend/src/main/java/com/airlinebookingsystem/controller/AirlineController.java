@@ -2,6 +2,12 @@ package com.airlinebookingsystem.controller;
 
 import com.airlinebookingsystem.entity.Airline;
 import com.airlinebookingsystem.service.AirlineService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,87 +28,79 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
+@Tag(name = "Airlines", description = "Manage airlines — CRUD, activate/deactivate")
 public class AirlineController {
 
     private final AirlineService airlineService;
 
-    /**
-     * Retrieves all airlines from the system.
-     *
-     * @return ResponseEntity containing a list of all airlines
-     */
+    @Operation(summary = "Get all airlines")
+    @SecurityRequirements
     @GetMapping
     public ResponseEntity<List<Airline>> getAllAirlines() {
         log.info("GET /airlines");
         return ResponseEntity.ok(airlineService.getAllAirlines());
     }
 
-    /**
-     * Retrieves all active airlines from the system.
-     *
-     * @return ResponseEntity containing a list of all active airlines
-     */
+    @Operation(summary = "Get all active airlines")
+    @SecurityRequirements
     @GetMapping("/active")
     public ResponseEntity<List<Airline>> getAllActiveAirlines() {
         log.info("GET /airlines/active");
         return ResponseEntity.ok(airlineService.getAllActiveAirlines());
     }
 
-    /**
-     * Retrieves an airline by its ID.
-     *
-     * @param id the ID of the airline to retrieve
-     * @return ResponseEntity containing the airline if found, or 404 if not found
-     */
+    @Operation(summary = "Get airline by ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Airline found"),
+            @ApiResponse(responseCode = "404", description = "Airline not found")
+    })
+    @SecurityRequirements
     @GetMapping("/{id}")
-    public ResponseEntity<Airline> getAirlineById(@PathVariable @NonNull Long id) {
+    public ResponseEntity<Airline> getAirlineById(
+            @Parameter(description = "Airline ID") @PathVariable @NonNull Long id) {
         log.info("GET /airlines/{}", id);
         return ResponseEntity.ok(airlineService.getAirlineById(id));
     }
 
-    /**
-     * Retrieves an airline by its code.
-     *
-     * @param code the airline code to search for
-     * @return ResponseEntity containing the airline if found, or 404 if not found
-     */
+    @Operation(summary = "Get airline by IATA code")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Airline found"),
+            @ApiResponse(responseCode = "404", description = "Airline not found")
+    })
+    @SecurityRequirements
     @GetMapping("/code/{code}")
-    public ResponseEntity<Airline> getAirlineByCode(@PathVariable String code) {
+    public ResponseEntity<Airline> getAirlineByCode(
+            @Parameter(description = "IATA code e.g. EI for Aer Lingus") @PathVariable String code) {
         log.info("GET /airlines/code/{}", code);
         return ResponseEntity.ok(airlineService.getAirlineByCode(code));
     }
 
-    /**
-     * Retrieves airlines by country.
-     *
-     * @param country the country to search for airlines in
-     * @return ResponseEntity containing a list of airlines in the specified country
-     */
+    @Operation(summary = "Get airlines by country")
+    @SecurityRequirements
     @GetMapping("/country/{country}")
-    public ResponseEntity<List<Airline>> getAirlinesByCountry(@PathVariable String country) {
+    public ResponseEntity<List<Airline>> getAirlinesByCountry(
+            @Parameter(description = "Country name e.g. Ireland") @PathVariable String country) {
         log.info("GET /airlines/country/{}", country);
         return ResponseEntity.ok(airlineService.getAirlinesByCountry(country));
     }
 
-    /**
-     * Creates a new airline in the system.
-     *
-     * @param airline the airline to create
-     * @return ResponseEntity containing the created airline with status 201
-     */
+    @Operation(summary = "Create a new airline", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Airline created"),
+            @ApiResponse(responseCode = "409", description = "Airline code already exists")
+    })
     @PostMapping
     public ResponseEntity<Airline> createAirline(@Valid @RequestBody Airline airline) {
         log.info("POST /airlines - code: {}", airline.getCode());
         return ResponseEntity.status(HttpStatus.CREATED).body(airlineService.createAirline(airline));
     }
 
-    /**
-     * Updates an existing airline's details.
-     *
-     * @param id             the ID of the airline to update
-     * @param airlineDetails the new airline details
-     * @return ResponseEntity containing the updated airline
-     */
+    @Operation(summary = "Update an existing airline", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Airline updated"),
+            @ApiResponse(responseCode = "404", description = "Airline not found"),
+            @ApiResponse(responseCode = "409", description = "Airline code already exists")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<Airline> updateAirline(@PathVariable @NonNull Long id,
             @Valid @RequestBody Airline airlineDetails) {
@@ -110,12 +108,11 @@ public class AirlineController {
         return ResponseEntity.ok(airlineService.updateAirline(id, airlineDetails));
     }
 
-    /**
-     * Deactivates an airline (soft delete).
-     *
-     * @param id the ID of the airline to deactivate
-     * @return ResponseEntity with status 204 if successful
-     */
+    @Operation(summary = "Deactivate an airline", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Airline deactivated"),
+            @ApiResponse(responseCode = "404", description = "Airline not found")
+    })
     @PatchMapping("/{id}/deactivate")
     public ResponseEntity<Void> deactivateAirline(@PathVariable @NonNull Long id) {
         log.info("PATCH /airlines/{}/deactivate", id);
@@ -123,12 +120,11 @@ public class AirlineController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Reactivates a previously deactivated airline.
-     *
-     * @param id the ID of the airline to reactivate
-     * @return ResponseEntity with status 204 if successful
-     */
+    @Operation(summary = "Reactivate an airline", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Airline reactivated"),
+            @ApiResponse(responseCode = "404", description = "Airline not found")
+    })
     @PatchMapping("/{id}/reactivate")
     public ResponseEntity<Void> reactivateAirline(@PathVariable @NonNull Long id) {
         log.info("PATCH /airlines/{}/reactivate", id);
@@ -136,13 +132,11 @@ public class AirlineController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Permanently deletes an airline from the system.
-     * Use with caution - this will affect flight records.
-     *
-     * @param id the ID of the airline to delete
-     * @return ResponseEntity with status 204 if successful
-     */
+    @Operation(summary = "Permanently delete an airline", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Airline deleted"),
+            @ApiResponse(responseCode = "404", description = "Airline not found")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAirline(@PathVariable @NonNull Long id) {
         log.info("DELETE /airlines/{}", id);

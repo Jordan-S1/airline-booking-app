@@ -8,7 +8,15 @@ package com.airlinebookingsystem.controller;
 
 import com.airlinebookingsystem.entity.Airport;
 import com.airlinebookingsystem.service.AirportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,67 +25,57 @@ import java.util.List;
 @RestController
 @RequestMapping("api/v1/airports")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173") // For development
-
+@Slf4j
+@CrossOrigin(origins = "*")
+@Tag(name = "Airports", description = "Search and retrieve airport data")
 public class AirportController {
 
     private final AirportService airportService;
 
-    /**
-     * Retrieves all airports from the system.
-     *
-     * @return ResponseEntity containing a list of all airports with HTTP status 200 (OK)
-     */
+    @Operation(summary = "Get all airports")
+    @SecurityRequirements
     @GetMapping
     public ResponseEntity<List<Airport>> getAllAirports() {
+        log.info("GET /airports");
         return ResponseEntity.ok(airportService.getAllAirports());
     }
 
-    /**
-     * Searches for airports based on a query string.
-     * Matches against airport name, city, or code.
-     *
-     * @param query the search string to match against airport fields
-     * @return ResponseEntity containing a list of matching airports with HTTP status 200 (OK)
-     */
+    @Operation(summary = "Search airports by name, city, or code")
+    @SecurityRequirements
     @GetMapping("/search")
-    public ResponseEntity<List<Airport>> searchAirports(@RequestParam String query) {
+    public ResponseEntity<List<Airport>> searchAirports(
+            @Parameter(description = "Search term e.g. Dublin, DUB, London") @RequestParam String query) {
+        log.info("GET /airports/search?query={}", query);
         return ResponseEntity.ok(airportService.searchAirports(query));
     }
 
-    /**
-     * Retrieves a list of airports located in a specified country.
-     *
-     * @param country the name of the country to filter airports by
-     * @return ResponseEntity containing a list of airports in the specified country
-     * with HTTP status 200 (OK)
-     */
+    @Operation(summary = "Get airports by country")
+    @SecurityRequirements
     @GetMapping("/by-country")
-    public ResponseEntity<List<Airport>> getAirportsByCountry(@RequestParam String country) {
-        List<Airport> airports = airportService.getAirportsByCountry(country);
-        return ResponseEntity.ok(airports);
+    public ResponseEntity<List<Airport>> getAirportsByCountry(
+            @Parameter(description = "Country name e.g. Ireland") @RequestParam String country) {
+        log.info("GET /airports/by-country?country={}", country);
+        return ResponseEntity.ok(airportService.getAirportsByCountry(country));
     }
 
-    /**
-     * Retrieves an airport by its unique code.
-     *
-     * @param code the IATA/ICAO code of the airport
-     * @return ResponseEntity containing the airport if found (HTTP status 200),
-     * or HTTP status 404 if not found
-     */
+    @Operation(summary = "Get airport by IATA code")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Airport found"),
+            @ApiResponse(responseCode = "404", description = "Airport not found")
+    })
+    @SecurityRequirements
     @GetMapping("/{code}")
-    public ResponseEntity<Airport> getAirportByCode(@PathVariable String code) {
+    public ResponseEntity<Airport> getAirportByCode(
+            @Parameter(description = "IATA code e.g. DUB") @PathVariable String code) {
+        log.info("GET /airports/{}", code);
         return ResponseEntity.ok(airportService.getAirportByCode(code));
     }
 
-    /**
-     * Creates a new airport in the system.
-     *
-     * @param airport the airport entity to create
-     * @return ResponseEntity containing the created airport with HTTP status 200 (OK)
-     */
+    @Operation(summary = "Create a new airport", description = "Requires authentication")
+    @ApiResponse(responseCode = "200", description = "Airport created")
     @PostMapping
     public ResponseEntity<Airport> createAirport(@RequestBody Airport airport) {
+        log.info("POST /airports — code: {}", airport.getCode());
         return ResponseEntity.ok(airportService.saveAirport(airport));
     }
 }

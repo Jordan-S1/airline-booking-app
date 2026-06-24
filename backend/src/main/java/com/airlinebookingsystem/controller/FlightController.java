@@ -5,6 +5,12 @@ import com.airlinebookingsystem.dto.flight.FlightSearchResponse;
 import com.airlinebookingsystem.dto.flight.FlightSearchResult;
 import com.airlinebookingsystem.entity.Flight;
 import com.airlinebookingsystem.service.FlightService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,62 +32,50 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
+@Tag(name = "Flights", description = "Search flights and manage flight records")
 public class FlightController {
 
     private final FlightService flightService;
 
-    /**
-     * Retrieves all flights from the system.
-     *
-     * @return ResponseEntity containing a list of all flights
-     */
+    @Operation(summary = "Get all flights")
+    @SecurityRequirements
     @GetMapping
     public ResponseEntity<List<Flight>> getAllFlights() {
         log.info("GET /flights");
         return ResponseEntity.ok(flightService.getAllFlights());
     }
 
-    /**
-     * Retrieves a flight by its ID.
-     *
-     * @param id the ID of the flight to retrieve
-     * @return ResponseEntity containing the flight if found, or 404 if not found
-     */
+    @Operation(summary = "Get flight by ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Flight found"),
+            @ApiResponse(responseCode = "404", description = "Flight not found")
+    })
+    @SecurityRequirements
     @GetMapping("/{id}")
-    public ResponseEntity<Flight> getFlightById(@PathVariable @NonNull Long id) {
+    public ResponseEntity<Flight> getFlightById(@Parameter(description = "Flight ID") @PathVariable @NonNull Long id) {
         log.info("GET /flights/{}", id);
         return ResponseEntity.ok(flightService.getFlightById(id));
     }
 
-    /**
-     * Retrieves a flight by its flight number.
-     *
-     * @param flightNumber the flight number to search for (must not be blank)
-     * @return ResponseEntity containing the flight if found, or 404 if not found
-     */
+    @Operation(summary = "Get flight by flight number")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Flight found"),
+            @ApiResponse(responseCode = "404", description = "Flight not found")
+    })
+    @SecurityRequirements
     @GetMapping("/number/{flightNumber}")
-    public ResponseEntity<Flight> getFlightByNumber(@PathVariable @NotBlank String flightNumber) {
+    public ResponseEntity<Flight> getFlightByNumber(
+            @Parameter(description = "Flight number e.g. EI204") @PathVariable @NotBlank String flightNumber) {
         log.info("GET /flights/number/{}", flightNumber);
         return ResponseEntity.ok(flightService.getFlightByNumber(flightNumber));
     }
 
-    /**
-     * Searches for available flights based on search criteria.
-     * Supports both one-way and round-trip searches.
-     * Request body should contain:
-     * - departureAirport: Airport code (e.g., "LAX")
-     * - arrivalAirport: Airport code (e.g., "JFK")
-     * - departureDate: Departure date in YYYY-MM-DD format
-     * - returnDate: Return date (optional, for round-trip)
-     * - passengers: Number of passengers (optional, defaults to 1)
-     * - seatClass: Seat class preference (optional, defaults to "ECONOMY")
-     * - directFlightsOnly: Filter for direct flights only (optional, defaults to
-     * false)
-     *
-     * @param request the FlightSearchRequest DTO with search criteria
-     * @return ResponseEntity containing FlightSearchResult with outbound and
-     *         optional return flights
-     */
+    @Operation(summary = "Search available flights", description = "Search by origin, destination, date, passengers, and seat class")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Search results returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid search parameters")
+    })
+    @SecurityRequirements
     @PostMapping("/search")
     public ResponseEntity<FlightSearchResult> searchFlights(@Valid @RequestBody FlightSearchRequest request) {
         log.info(
@@ -92,51 +86,40 @@ public class FlightController {
         return ResponseEntity.ok(flightService.searchFlights(request));
     }
 
-    /**
-     * Retrieves all upcoming flights from the current date and time.
-     *
-     * @return ResponseEntity containing a list of upcoming flights
-     */
+    @Operation(summary = "Get upcoming flights")
+    @SecurityRequirements
     @GetMapping("/upcoming")
     public ResponseEntity<List<FlightSearchResponse>> getUpcomingFlights() {
         log.info("GET /flights/upcoming");
         return ResponseEntity.ok(flightService.getUpcomingFlights());
     }
 
-    /**
-     * Retrieves all flights operated by a specific airline using airline code.
-     *
-     * @param airlineCode the code of the airline (e.g., "AA", "DL", "UA") - must
-     *                    not be blank
-     * @return ResponseEntity containing a list of FlightSearchResponse DTOs for the
-     *         specified airline
-     */
+    @Operation(summary = "Get flights by airline code")
+    @SecurityRequirements
     @GetMapping("/airline/{airlineCode}")
     public ResponseEntity<List<FlightSearchResponse>> getFlightsByAirlineCode(
-            @PathVariable @NotBlank String airlineCode) {
+            @Parameter(description = "IATA airline code e.g. EI") @PathVariable @NotBlank String airlineCode) {
         log.info("GET /flights/airline/{}", airlineCode);
         return ResponseEntity.ok(flightService.getFlightsByAirlineCode(airlineCode));
     }
 
-    /**
-     * Creates a new flight in the system.
-     *
-     * @param flight the flight to create
-     * @return ResponseEntity containing the created flight with status 201
-     */
+    @Operation(summary = "Create a new flight", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Flight created"),
+            @ApiResponse(responseCode = "400", description = "Invalid flight data"),
+            @ApiResponse(responseCode = "409", description = "Flight number already exists")
+    })
     @PostMapping
     public ResponseEntity<Flight> createFlight(@Valid @RequestBody Flight flight) {
         log.info("POST /flights: {}", flight.getFlightNumber());
         return ResponseEntity.status(HttpStatus.CREATED).body(flightService.createFlight(flight));
     }
 
-    /**
-     * Updates an existing flight's details.
-     *
-     * @param id            the ID of the flight to update
-     * @param flightDetails the new flight details
-     * @return ResponseEntity containing the updated flight
-     */
+    @Operation(summary = "Update a flight", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Flight updated"),
+            @ApiResponse(responseCode = "404", description = "Flight not found")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<Flight> updateFlight(@PathVariable @NonNull Long id,
             @Valid @RequestBody Flight flightDetails) {
@@ -144,12 +127,11 @@ public class FlightController {
         return ResponseEntity.ok(flightService.updateFlight(id, flightDetails));
     }
 
-    /**
-     * Deletes a flight from the system.
-     *
-     * @param id the ID of the flight to delete
-     * @return ResponseEntity with status 204 if successful
-     */
+    @Operation(summary = "Delete a flight", description = "Requires authentication")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Flight deleted"),
+            @ApiResponse(responseCode = "404", description = "Flight not found")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFlight(@PathVariable @NonNull Long id) {
         log.info("DELETE /flights/{}", id);

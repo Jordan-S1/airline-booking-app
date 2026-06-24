@@ -48,6 +48,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/airlines/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/flights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+
+                        // Swagger UI and OpenAPI spec — public access
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs")
+                        .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

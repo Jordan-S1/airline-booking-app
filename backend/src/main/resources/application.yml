@@ -22,3 +22,14 @@ spring:
 jwt:
   secret: ${JWT_SECRET:aBXiCNzN7RCezlh1W0Sdn_Hn3B7syMOd_cKMj24eteA}
   expiration: ${JWT_EXPIRATION_MS:86400000}
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
