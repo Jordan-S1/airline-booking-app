@@ -1,11 +1,15 @@
 package com.airlinebookingsystem.config;
 
 import com.airlinebookingsystem.security.JwtAuthFilter;
+import com.airlinebookingsystem.service.UserService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,6 +30,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * GET /api/v1/airports/** — airport data
  * GET /api/v1/airlines/** — airline data
  * GET /actuator/health — health check
+ * GET /swagger-ui/** — API docs
  *
  * Everything else requires a valid Bearer token.
  */
@@ -36,6 +41,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final UserService userService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -53,9 +59,21 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs")
                         .permitAll()
                         .anyRequest().authenticated())
+                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Wires UserService + PasswordEncoder into the AuthenticationManager
+     * so Spring Security knows how to validate credentials on login.
+     */
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
     }
 
     @Bean
