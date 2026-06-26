@@ -1,21 +1,66 @@
+# ============================================================
+# Docker Compose - Airline Booking System
+# ============================================================
+# Development usage:
+#   docker-compose up -d          → start DB only
+#   docker-compose --profile app up -d → start DB + Spring Boot app
+#
+# Requires a .env file in the same directory.
+# Copy .env.example to .env and fill in your values.
+# ============================================================
+
 services:
+  # ------ PostgreSQL Database ----------------------
   db:
-    container_name: airline-booking-system
-    image: postgres:latest
+    container_name: airline-booking-db
+    image: postgres:18
     environment:
-      POSTGRES_USER: airline_user
-      POSTGRES_PASSWORD: airline_password
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: airline_booking
       PGDATA: /data/postgres
     volumes:
       - db:/data/postgres
     ports:
       - "5332:5432"
     networks:
-      - db
+      - airline-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d airline_booking"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ------ Spring Boot Application ---------------
+  # Run with: docker-compose --profile app up
+  # Or run the app locally and only use the DB service above.
+  app:
+    profiles:
+      - app
+    container_name: airline-booking-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/airline_booking
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      DDL_AUTO: ${DDL_AUTO:-validate}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - airline-network
     restart: unless-stopped
 
 networks:
-  db:
+  airline-network:
     driver: bridge
 volumes:
   db:

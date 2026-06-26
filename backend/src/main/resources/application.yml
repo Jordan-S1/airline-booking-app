@@ -1,16 +1,19 @@
+server:
+  port: ${SERVER_PORT:8080}
+
 spring:
   application:
     name: airline-booking-system
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5332/airline_booking}
-    username: ${DB_USERNAME:airline_user}
-    password: ${DB_PASSWORD:airline_password}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      ddl-auto: ${DDL_AUTO}
     show-sql: false
     properties:
       hibernate:
@@ -20,7 +23,7 @@ spring:
 # Generate a production secret with: openssl rand -base64 32
 # Inject via environment variable JWT_SECRET in production — never hardcode
 jwt:
-  secret: ${JWT_SECRET:aBXiCNzN7RCezlh1W0Sdn_Hn3B7syMOd_cKMj24eteA}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION_MS:86400000}
 
 # Swagger / OpenAPI
