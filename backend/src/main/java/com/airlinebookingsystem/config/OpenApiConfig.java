@@ -54,16 +54,23 @@ public class OpenApiConfig {
 
                         ## Authentication
                         1. Register at `POST /api/v1/auth/register`
+                        
                         2. Login at `POST /api/v1/auth/login` to receive a JWT token
+                        
                         3. Click **Authorize** above and enter: `Bearer <your-token>`
+                        
                         4. All protected endpoints will now include your token automatically
 
                         ## Public Endpoints
                         The following endpoints require no authentication:
                         - `POST /api/v1/auth/register`
+                        
                         - `POST /api/v1/auth/login`
+                        
                         - `GET /api/v1/flights/**`
+                        
                         - `GET /api/v1/airports/**`
+                        
                         - `GET /api/v1/airlines/**`
                         """)
                 .version("1.0.0")

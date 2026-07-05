@@ -76,6 +76,10 @@ public class SeatClassUtils {
                 flight.setFirstClassSeats(Math.max(0, newCount));
             }
         }
+
+        // Always keep availableSeats in sync — it reflects total remaining seats across all classes
+        int newAvailable = (flight.getAvailableSeats() != null ? flight.getAvailableSeats() : 0) + change;
+        flight.setAvailableSeats(Math.max(0, newAvailable));
     }
 
     /**

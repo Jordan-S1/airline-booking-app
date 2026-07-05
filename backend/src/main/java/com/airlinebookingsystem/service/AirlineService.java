@@ -1,9 +1,11 @@
 package com.airlinebookingsystem.service;
 
+import com.airlinebookingsystem.dto.airline.AirlineRequest;
+import com.airlinebookingsystem.dto.airline.AirlineResponse;
 import com.airlinebookingsystem.entity.Airline;
-import com.airlinebookingsystem.repository.AirlineRepository;
 import com.airlinebookingsystem.exception.DuplicateResourceException;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
+import com.airlinebookingsystem.repository.AirlineRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -11,119 +13,135 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-/**
- * Service class for managing airline operations in the airline booking system.
- * Handles airline-related business logic including CRUD operations and business
- * rules.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class AirlineService {
+
     private final AirlineRepository airlineRepository;
 
     @Transactional(readOnly = true)
-    public List<Airline> getAllAirlines() {
+    public List<AirlineResponse> getAllAirlines() {
         log.info("Fetching all airlines");
-        return airlineRepository.findAll();
+        return airlineRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<Airline> getAllActiveAirlines() {
+    public List<AirlineResponse> getAllActiveAirlines() {
         log.info("Fetching all active airlines");
-        return airlineRepository.findActiveAirlines();
+        return airlineRepository.findActiveAirlines().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public Airline getAirlineById(@NonNull Long id) {
+    public Optional<AirlineResponse> getAirlineById(@NonNull Long id) {
         log.info("Fetching airline with ID: {}", id);
-        return airlineRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Airline", id));
+        return airlineRepository.findById(id).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public Airline getAirlineByCode(String code) {
+    public Optional<AirlineResponse> getAirlineByCode(String code) {
         log.info("Fetching airline with code: {}", code);
-        return airlineRepository.findByCode(code.toUpperCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Airline", code));
+        return airlineRepository.findByCode(code.toUpperCase()).map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<Airline> getAirlinesByCountry(String country) {
+    public List<AirlineResponse> getAirlinesByCountry(String country) {
         log.info("Fetching airlines in country: {}", country);
-        return airlineRepository.findByCountry(country);
+        return airlineRepository.findByCountry(country).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
-    public Airline createAirline(Airline airline) {
-        String upperCode = airline.getCode().toUpperCase();
-        airline.setCode(upperCode);
+    public AirlineResponse createAirline(AirlineRequest request) {
+        String upperCode = request.code().toUpperCase();
 
         if (airlineRepository.existsByCode(upperCode)) {
             throw new DuplicateResourceException("Airline code", upperCode);
         }
 
+        Airline airline = Airline.builder()
+                .code(upperCode)
+                .name(request.name())
+                .logoUrl(request.logoUrl())
+                .website(request.website())
+                .country(request.country())
+                .active(request.active() != null ? request.active() : true)
+                .build();
+
         log.info("Creating new airline with code: {}", upperCode);
-        return airlineRepository.save(airline);
+        return mapToResponse(airlineRepository.save(airline));
     }
 
-    public Airline updateAirline(@NonNull Long id, Airline airlineDetails) {
+    public AirlineResponse updateAirline(@NonNull Long id, AirlineRequest request) {
         log.info("Updating airline with ID: {}", id);
 
         Airline airline = airlineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Airline", id));
 
-        String newUpperCode = airlineDetails.getCode().toUpperCase();
+        String newUpperCode = request.code().toUpperCase();
 
-        if (!airline.getCode().equals(newUpperCode) &&
-                airlineRepository.existsByCode(newUpperCode)) {
+        if (!airline.getCode().equals(newUpperCode) && airlineRepository.existsByCode(newUpperCode)) {
             throw new DuplicateResourceException("Airline code", newUpperCode);
         }
 
         airline.setCode(newUpperCode);
-        airline.setName(airlineDetails.getName());
-        airline.setLogoUrl(airlineDetails.getLogoUrl());
-        airline.setWebsite(airlineDetails.getWebsite());
-        airline.setCountry(airlineDetails.getCountry());
-        airline.setActive(airlineDetails.getActive());
+        airline.setName(request.name());
+        airline.setLogoUrl(request.logoUrl());
+        airline.setWebsite(request.website());
+        airline.setCountry(request.country());
+        if (request.active() != null) airline.setActive(request.active());
 
-        return airlineRepository.save(airline);
+        return mapToResponse(airlineRepository.save(airline));
     }
 
     public void deactivateAirline(@NonNull Long id) {
         log.info("Deactivating airline with ID: {}", id);
-
         Airline airline = airlineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Airline", id));
-
         airline.setActive(false);
         airlineRepository.save(airline);
     }
 
     public void reactivateAirline(@NonNull Long id) {
         log.info("Reactivating airline with ID: {}", id);
-
         Airline airline = airlineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Airline", id));
-
         airline.setActive(true);
         airlineRepository.save(airline);
     }
 
     public void deleteAirline(@NonNull Long id) {
         log.info("Permanently deleting airline with ID: {}", id);
-
         if (!airlineRepository.existsById(id)) {
             throw new ResourceNotFoundException("Airline", id);
         }
-
         airlineRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
     public boolean existsByCode(String code) {
-        String upperCode = code.toUpperCase();
-        return airlineRepository.existsByCode(upperCode);
+        return airlineRepository.existsByCode(code.toUpperCase());
+    }
+
+    private AirlineResponse mapToResponse(Airline airline) {
+        return new AirlineResponse(
+                airline.getId(),
+                airline.getCode(),
+                airline.getName(),
+                airline.getLogoUrl(),
+                airline.getWebsite(),
+                airline.getCountry(),
+                airline.getActive(),
+                airline.getCreatedAt(),
+                airline.getUpdatedAt()
+        );
     }
 }

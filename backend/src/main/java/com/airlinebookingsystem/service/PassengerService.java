@@ -4,8 +4,11 @@ import com.airlinebookingsystem.dto.passenger.PassengerRequest;
 import com.airlinebookingsystem.dto.passenger.PassengerResponse;
 import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Passenger;
+import com.airlinebookingsystem.entity.Flight;
 import com.airlinebookingsystem.repository.BookingRepository;
+import com.airlinebookingsystem.repository.FlightRepository;
 import com.airlinebookingsystem.repository.PassengerRepository;
+import com.airlinebookingsystem.util.SeatClassUtils;
 import com.airlinebookingsystem.exception.BookingException;
 import com.airlinebookingsystem.exception.DuplicateResourceException;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
@@ -39,6 +42,7 @@ public class PassengerService {
 
     private final PassengerRepository passengerRepository;
     private final BookingRepository bookingRepository;
+    private final FlightRepository flightRepository;
 
     /**
      * Creates a new passenger record associated with a booking.
@@ -64,6 +68,9 @@ public class PassengerService {
 
         Passenger passenger = buildPassengerFromRequest(passengerRequest, booking);
         passenger = passengerRepository.save(Objects.requireNonNull(passenger));
+
+        // Sync numberOfPassengers and totalAmount on the booking
+        syncBookingPassengerCount(booking);
 
         log.info("Passenger created successfully with ID: {}", passenger.getId());
         return mapToPassengerResponse(passenger);
@@ -246,7 +253,13 @@ public class PassengerService {
 
         validateBookingForPassengerOperation(passenger.getBooking());
 
+        Booking booking = passenger.getBooking();
         passengerRepository.deleteById(id);
+
+        // Sync numberOfPassengers and totalAmount on the booking
+        // Use count - 1 since the deleted passenger is still in DB within this transaction
+        syncBookingPassengerCountAfterDelete(booking, id);
+
         log.info("Passenger deleted successfully with ID: {}", id);
     }
 
@@ -333,9 +346,7 @@ public class PassengerService {
                 .gender(Passenger.Gender.valueOf(request.gender().toUpperCase()))
                 .passportNumber(request.passportNumber().trim().toUpperCase())
                 .nationality(request.nationality().trim())
-                .passengerType(request.passengerType() != null
-                        ? Passenger.PassengerType.valueOf(request.passengerType().toUpperCase())
-                        : determinePassengerType(request.dateOfBirth()))
+                .passengerType(determinePassengerType(request.dateOfBirth()))
                 .booking(booking)
                 .build();
     }
@@ -351,11 +362,7 @@ public class PassengerService {
         passenger.setPassportNumber(request.passportNumber().trim().toUpperCase());
         passenger.setNationality(request.nationality().trim());
 
-        if (request.passengerType() != null) {
-            passenger.setPassengerType(Passenger.PassengerType.valueOf(request.passengerType().toUpperCase()));
-        } else {
-            passenger.setPassengerType(determinePassengerType(request.dateOfBirth()));
-        }
+        passenger.setPassengerType(determinePassengerType(request.dateOfBirth()));
     }
 
     /**
@@ -368,6 +375,58 @@ public class PassengerService {
         if (age < 12)
             return Passenger.PassengerType.CHILD;
         return Passenger.PassengerType.ADULT;
+    }
+
+    /**
+     * Syncs numberOfPassengers and totalAmount on the booking
+     * based on the actual passenger count in the DB.
+     */
+    private void syncBookingPassengerCount(Booking booking) {
+        int newPassengerCount = passengerRepository.findByBookingId(booking.getId()).size();
+        int previousPassengerCount = booking.getNumberOfPassengers();
+        int delta = newPassengerCount - previousPassengerCount;
+
+        java.math.BigDecimal pricePerPassenger = SeatClassUtils.getPriceForSeatClass(
+                booking.getFlight(), booking.getSeatClass());
+        booking.setNumberOfPassengers(newPassengerCount);
+        booking.setTotalAmount(pricePerPassenger.multiply(java.math.BigDecimal.valueOf(newPassengerCount)));
+        bookingRepository.save(booking);
+
+        // Update flight seat availability for the extra passengers
+        if (delta != 0) {
+            Flight flight = booking.getFlight();
+            SeatClassUtils.updateFlightSeatAvailability(flight, booking.getSeatClass(), Math.abs(delta), delta < 0);
+            flightRepository.save(flight);
+            log.info("Updated flight {} seats by delta: {}", flight.getFlightNumber(), delta);
+        }
+
+        log.info("Synced booking {} — passengers: {}, total: {}",
+                booking.getBookingReference(), newPassengerCount, booking.getTotalAmount());
+    }
+
+    /**
+     * Syncs booking after a passenger deletion.
+     * Excludes the deleted passenger from the count.
+     */
+    private void syncBookingPassengerCountAfterDelete(Booking booking, Long deletedPassengerId) {
+        long newPassengerCount = passengerRepository.findByBookingId(booking.getId()).stream()
+                .filter(p -> !p.getId().equals(deletedPassengerId))
+                .count();
+        java.math.BigDecimal pricePerPassenger = SeatClassUtils.getPriceForSeatClass(
+                booking.getFlight(), booking.getSeatClass());
+        booking.setNumberOfPassengers((int) newPassengerCount);
+        booking.setTotalAmount(pricePerPassenger.multiply(java.math.BigDecimal.valueOf(newPassengerCount)));
+        bookingRepository.save(booking);
+
+        // Restore one seat on the flight for the deleted passenger
+        com.airlinebookingsystem.entity.Flight flight = booking.getFlight();
+        SeatClassUtils.updateFlightSeatAvailability(flight, booking.getSeatClass(), 1, true);
+        flightRepository.save(flight);
+        log.info("Restored 1 {} seat on flight {} after passenger delete",
+                booking.getSeatClass(), flight.getFlightNumber());
+
+        log.info("Synced booking {} after delete — passengers: {}, total: {}",
+                booking.getBookingReference(), newPassengerCount, booking.getTotalAmount());
     }
 
     /**
