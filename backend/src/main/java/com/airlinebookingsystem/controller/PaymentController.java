@@ -14,9 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,7 +35,8 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @Operation(summary = "Process a payment", description = "Processes payment for a PENDING booking and moves it to CONFIRMED on success")
+    @Operation(summary = "Process a payment",
+            description = "Processes payment for a PENDING booking and moves it to CONFIRMED on success")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Payment processed successfully"),
             @ApiResponse(responseCode = "400", description = "Booking not in PENDING status"),
@@ -73,7 +74,9 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentByBookingId(bookingId));
     }
 
-    @Operation(summary = "Get payments by status", description = "Valid statuses: PENDING, SUCCESS, FAILED, REFUNDED")
+    @Operation(summary = "Get payments by status",
+            description = "Valid statuses: PENDING, SUCCESS, FAILED, REFUNDED")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/status/{status}")
     public ResponseEntity<List<PaymentResponse>> getPaymentsByStatus(
             @Parameter(description = "Payment status") @PathVariable String status) {
@@ -83,25 +86,28 @@ public class PaymentController {
     }
 
     @Operation(summary = "Get payments within a date range")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/date-range")
     public ResponseEntity<List<PaymentResponse>> getPaymentsByDateRange(
-            @Parameter(description = "Start date (ISO format)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @Parameter(description = "End date (ISO format)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @Parameter(description = "Start date (ISO format)")
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @Parameter(description = "End date (ISO format)")
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         log.info("GET /payments/date-range: {} to {}", startDate, endDate);
         return ResponseEntity.ok(paymentService.getPaymentsByDateRange(startDate, endDate));
     }
 
-    @Operation(summary = "Refund a payment", description = "Issues a full or partial refund for a completed payment")
+    @Operation(summary = "Refund a payment",
+            description = "Issues a full refund for a completed payment and cancels the booking. Seats are restored to the flight.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Refund processed"),
-            @ApiResponse(responseCode = "400", description = "Payment cannot be refunded or refund amount exceeds original"),
+            @ApiResponse(responseCode = "200", description = "Refund processed and booking cancelled"),
+            @ApiResponse(responseCode = "400", description = "Payment cannot be refunded"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
     @PostMapping("/{transactionId}/refund")
     public ResponseEntity<PaymentResponse> refundPayment(
-            @Parameter(description = "Transaction ID to refund") @PathVariable String transactionId,
-            @Parameter(description = "Refund amount (must not exceed original payment)") @RequestParam BigDecimal amount) {
-        log.info("POST /payments/{}/refund — amount: {}", transactionId, amount);
-        return ResponseEntity.ok(paymentService.refundPayment(transactionId, amount));
+            @Parameter(description = "Transaction ID to refund") @PathVariable String transactionId) {
+        log.info("POST /payments/{}/refund", transactionId);
+        return ResponseEntity.ok(paymentService.refundPayment(transactionId, null));
     }
 }

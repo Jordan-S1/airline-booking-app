@@ -64,7 +64,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .transactionId(transactionId)
                 .booking(booking)
-                .amount(paymentRequest.amount())
+                .amount(booking.getTotalAmount())
                 .paymentMethod(paymentRequest.paymentMethod())
                 .status(Payment.PaymentStatus.PENDING)
                 .build();
@@ -76,9 +76,9 @@ public class PaymentService {
             // Process payment through gateway
             String gatewayResponse = paymentGatewayService.processPayment(
                     transactionId,
-                    paymentRequest.amount(),
+                    booking.getTotalAmount(),
                     paymentRequest.paymentMethod(),
-                    paymentRequest.paymentDetails());
+                    null);
 
             // Update payment status on success
             payment.setStatus(Payment.PaymentStatus.SUCCESS);
@@ -122,13 +122,9 @@ public class PaymentService {
             throw new BookingException("Payment cannot be refunded. Current status: " + payment.getStatus());
         }
 
-        // Use original amount if refund amount not specified
-        BigDecimal amountToRefund = refundAmount != null ? refundAmount : payment.getAmount();
-
-        // Validate refund amount
-        if (amountToRefund.compareTo(payment.getAmount()) > 0) {
-            throw new IllegalArgumentException("Refund amount cannot exceed original payment amount");
-        }
+        // Always refund the full amount — partial refunds not supported.
+        // A refund means the trip is canceled entirely.
+        BigDecimal amountToRefund = payment.getAmount();
 
         try {
             // Process refund through gateway
@@ -141,10 +137,11 @@ public class PaymentService {
             payment.setPaymentGatewayResponse(refundResponse);
             payment = paymentRepository.save(payment);
 
-            // Update booking status to canceled
+            // Cancel the booking and restore flight seats
             bookingService.cancelBooking(payment.getBooking().getBookingReference());
 
-            log.info("Refund successful for transaction ID: {}", transactionId);
+            log.info("Refund successful for transaction ID: {} — booking cancelled, seats restored",
+                    transactionId);
 
         } catch (Exception e) {
             log.error("Refund failed for transaction ID: {}", transactionId, e);

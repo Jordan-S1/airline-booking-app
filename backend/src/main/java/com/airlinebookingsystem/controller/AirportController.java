@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -76,6 +77,7 @@ public class AirportController {
             @ApiResponse(responseCode = "201", description = "Airport created"),
             @ApiResponse(responseCode = "400", description = "Validation failed")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
     @PostMapping
     public ResponseEntity<AirportResponse> createAirport(@Valid @RequestBody AirportRequest request) {
         log.info("POST /airports — code: {}", request.code());

@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -20,7 +19,7 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
     @Override
     public String processPayment(String transactionId, BigDecimal amount,
                                  Payment.PaymentMethod paymentMethod,
-                                 Map<String, String> paymentDetails) throws Exception {
+                                 Object paymentDetails) throws Exception {
 
         log.info("Processing payment - Transaction ID: {}, Amount: {}, Method: {}",
                 transactionId, amount, paymentMethod);

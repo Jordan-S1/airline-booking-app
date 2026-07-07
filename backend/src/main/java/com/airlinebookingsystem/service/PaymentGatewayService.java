@@ -3,7 +3,6 @@ package com.airlinebookingsystem.service;
 import com.airlinebookingsystem.entity.Payment;
 
 import java.math.BigDecimal;
-import java.util.Map;
 
 /**
  * Service interface for payment gateway operations.
@@ -23,7 +22,7 @@ public interface PaymentGatewayService {
      */
     String processPayment(String transactionId, BigDecimal amount,
                           Payment.PaymentMethod paymentMethod,
-                          Map<String, String> paymentDetails) throws Exception;
+                          Object paymentDetails) throws Exception;
 
     /**
      * Processes a refund through the payment gateway.

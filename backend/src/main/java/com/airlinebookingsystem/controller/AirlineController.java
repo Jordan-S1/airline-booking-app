@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -88,6 +89,7 @@ public class AirlineController {
             @ApiResponse(responseCode = "400", description = "Validation failed"),
             @ApiResponse(responseCode = "409", description = "Airline code already exists")
     })
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<AirlineResponse> createAirline(@Valid @RequestBody AirlineRequest request) {
         log.info("POST /airlines — code: {}", request.code());
@@ -100,6 +102,7 @@ public class AirlineController {
             @ApiResponse(responseCode = "404", description = "Airline not found"),
             @ApiResponse(responseCode = "409", description = "Airline code conflict")
     })
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<AirlineResponse> updateAirline(
             @PathVariable Long id,
@@ -113,6 +116,7 @@ public class AirlineController {
             @ApiResponse(responseCode = "204", description = "Airline deactivated"),
             @ApiResponse(responseCode = "404", description = "Airline not found")
     })
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/deactivate")
     public ResponseEntity<Void> deactivateAirline(@PathVariable Long id) {
         log.info("PATCH /airlines/{}/deactivate", id);
@@ -125,6 +129,7 @@ public class AirlineController {
             @ApiResponse(responseCode = "204", description = "Airline reactivated"),
             @ApiResponse(responseCode = "404", description = "Airline not found")
     })
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/reactivate")
     public ResponseEntity<Void> reactivateAirline(@PathVariable Long id) {
         log.info("PATCH /airlines/{}/reactivate", id);
@@ -137,6 +142,7 @@ public class AirlineController {
             @ApiResponse(responseCode = "204", description = "Airline deleted"),
             @ApiResponse(responseCode = "404", description = "Airline not found")
     })
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAirline(@PathVariable Long id) {
         log.info("DELETE /airlines/{}", id);

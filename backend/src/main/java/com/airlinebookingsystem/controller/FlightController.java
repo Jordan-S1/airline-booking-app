@@ -15,17 +15,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST Controller for managing flight operations in the airline booking system.
- * Provides endpoints for flight search, CRUD operations, and flight-specific
- * queries.
- */
 @RestController
-@RequestMapping("api/v1/flights")
+@RequestMapping("/api/v1/flights")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
@@ -109,6 +105,7 @@ public class FlightController {
             @ApiResponse(responseCode = "404", description = "Airline or airport not found"),
             @ApiResponse(responseCode = "409", description = "Flight number already exists")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
     @PostMapping
     public ResponseEntity<FlightResponse> createFlight(@Valid @RequestBody FlightRequest request) {
         log.info("POST /flights — number: {}", request.flightNumber());
@@ -120,6 +117,7 @@ public class FlightController {
             @ApiResponse(responseCode = "200", description = "Flight updated"),
             @ApiResponse(responseCode = "404", description = "Flight or airport not found")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
     @PutMapping("/{id}")
     public ResponseEntity<FlightResponse> updateFlight(
             @PathVariable Long id,
@@ -133,6 +131,7 @@ public class FlightController {
             @ApiResponse(responseCode = "204", description = "Flight deleted"),
             @ApiResponse(responseCode = "404", description = "Flight not found")
     })
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFlight(@PathVariable Long id) {
         log.info("DELETE /flights/{}", id);
