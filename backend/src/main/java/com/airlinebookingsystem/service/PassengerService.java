@@ -4,10 +4,13 @@ import com.airlinebookingsystem.dto.passenger.PassengerRequest;
 import com.airlinebookingsystem.dto.passenger.PassengerResponse;
 import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Passenger;
-import com.airlinebookingsystem.entity.Flight;
 import com.airlinebookingsystem.repository.BookingRepository;
 import com.airlinebookingsystem.repository.FlightRepository;
 import com.airlinebookingsystem.repository.PassengerRepository;
+import com.airlinebookingsystem.repository.UserRepository;
+import com.airlinebookingsystem.entity.User;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.airlinebookingsystem.util.SeatClassUtils;
 import com.airlinebookingsystem.exception.BookingException;
 import com.airlinebookingsystem.exception.DuplicateResourceException;
@@ -43,6 +46,7 @@ public class PassengerService {
     private final PassengerRepository passengerRepository;
     private final BookingRepository bookingRepository;
     private final FlightRepository flightRepository;
+    private final UserRepository userRepository;
 
     /**
      * Creates a new passenger record associated with a booking.
@@ -254,6 +258,7 @@ public class PassengerService {
         validateBookingForPassengerOperation(passenger.getBooking());
 
         Booking booking = passenger.getBooking();
+        validateBookingOwnership(booking);
         passengerRepository.deleteById(id);
 
         // Sync numberOfPassengers and totalAmount on the booking
@@ -394,7 +399,7 @@ public class PassengerService {
 
         // Update flight seat availability for the extra passengers
         if (delta != 0) {
-            Flight flight = booking.getFlight();
+            com.airlinebookingsystem.entity.Flight flight = booking.getFlight();
             SeatClassUtils.updateFlightSeatAvailability(flight, booking.getSeatClass(), Math.abs(delta), delta < 0);
             flightRepository.save(flight);
             log.info("Updated flight {} seats by delta: {}", flight.getFlightNumber(), delta);
@@ -427,6 +432,27 @@ public class PassengerService {
 
         log.info("Synced booking {} after delete — passengers: {}, total: {}",
                 booking.getBookingReference(), newPassengerCount, booking.getTotalAmount());
+    }
+
+    /**
+     * Validates that the currently authenticated user owns the booking.
+     * ADMIN users bypass this check.
+     * Throws BookingException if a CUSTOMER tries to access another user's booking.
+     */
+    public void validateBookingOwnership(Booking booking) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return;
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_AIRLINE_STAFF"));
+        if (isAdmin) return;
+
+        String currentUserEmail = auth.getName();
+        if (!booking.getUser().getEmail().equals(currentUserEmail)) {
+            throw new com.airlinebookingsystem.exception.BookingException(
+                    "Access denied: you can only manage passengers on your own bookings");
+        }
     }
 
     /**

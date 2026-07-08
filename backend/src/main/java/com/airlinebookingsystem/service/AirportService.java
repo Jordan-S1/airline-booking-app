@@ -68,6 +68,21 @@ public class AirportService {
         return mapToResponse(airportRepository.save(airport));
     }
 
+    public AirportResponse updateAirport(@NonNull Long id, AirportRequest request) {
+        Airport airport = airportRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Airport", id));
+
+        // Code changes are not allowed — IATA codes are permanent identifiers
+        // If the code needs to change, delete and recreate the airport
+        airport.setName(request.name());
+        airport.setCity(request.city());
+        airport.setCountry(request.country());
+        if (request.timezone() != null) airport.setTimezone(request.timezone());
+
+        log.info("Updated airport: {}", airport.getCode());
+        return mapToResponse(airportRepository.save(airport));
+    }
+
     public void deleteAirport(@NonNull Long id) {
         if (!airportRepository.existsById(id)) {
             throw new ResourceNotFoundException("Airport", id);

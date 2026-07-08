@@ -107,7 +107,7 @@ public class UserService implements UserDetailsService {
 
         // Prevent demoting the last admin
         if (user.getRole() == User.Role.ADMIN && newRole != User.Role.ADMIN) {
-            long adminCount = userRepository.findByRole(User.Role.ADMIN).size();
+            long adminCount = userRepository.countByRole(User.Role.ADMIN);
             if (adminCount <= 1) {
                 throw new BookingException("Cannot demote the last admin in the system");
             }
@@ -130,8 +130,7 @@ public class UserService implements UserDetailsService {
             throw new BookingException("User account is already deactivated");
         }
         if (user.getRole() == User.Role.ADMIN) {
-            long adminCount = userRepository.findByRole(User.Role.ADMIN).stream()
-                    .filter(User::isEnabled).count();
+            long adminCount = userRepository.countActiveByRole(User.Role.ADMIN);
             if (adminCount <= 1) {
                 throw new BookingException("Cannot deactivate the last active admin");
             }

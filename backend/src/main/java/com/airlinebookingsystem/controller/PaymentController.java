@@ -22,8 +22,10 @@ import java.util.List;
 
 /**
  * REST controller for payment operations.
- * All endpoints require authentication.
- * Exception handling delegated to GlobalExceptionHandler.
+ * Role access rules:
+ *   ADMIN        — full access to all endpoints
+ *   AIRLINE_STAFF — read-only: view payments by transaction, booking, status, date range
+ *   CUSTOMER     — can only process payment and refund for their own bookings
  */
 @RestController
 @RequestMapping("/api/v1/payments")
@@ -36,13 +38,15 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @Operation(summary = "Process a payment",
-            description = "Processes payment for a PENDING booking and moves it to CONFIRMED on success")
+            description = "Processes payment for a PENDING booking. CUSTOMER can only pay for their own bookings.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Payment processed successfully"),
-            @ApiResponse(responseCode = "400", description = "Booking not in PENDING status"),
+            @ApiResponse(responseCode = "400", description = "Booking not in PENDING status or amount mismatch"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Booking not found"),
             @ApiResponse(responseCode = "409", description = "Payment already completed for this booking")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @PostMapping
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest request) {
         log.info("POST /payments — bookingId: {}", request.bookingId());
@@ -50,11 +54,14 @@ public class PaymentController {
                 .body(paymentService.processPayment(request));
     }
 
-    @Operation(summary = "Get payment by transaction ID")
+    @Operation(summary = "Get payment by transaction ID",
+            description = "ADMIN and AIRLINE_STAFF only")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Payment found"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
     @GetMapping("/transaction/{transactionId}")
     public ResponseEntity<PaymentResponse> getPaymentByTransactionId(
             @Parameter(description = "Transaction ID") @PathVariable String transactionId) {
@@ -62,11 +69,14 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentByTransactionId(transactionId));
     }
 
-    @Operation(summary = "Get payment for a booking")
+    @Operation(summary = "Get payment for a booking",
+            description = "ADMIN and AIRLINE_STAFF can see any booking's payment. CUSTOMER can only see their own.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Payment found"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Payment not found for this booking")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<PaymentResponse> getPaymentByBookingId(
             @Parameter(description = "Booking ID") @PathVariable Long bookingId) {
@@ -74,7 +84,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentByBookingId(bookingId));
     }
 
-    @Operation(summary = "Get payments by status",
+    @Operation(summary = "Get payments by status — ADMIN only",
             description = "Valid statuses: PENDING, SUCCESS, FAILED, REFUNDED")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/status/{status}")
@@ -85,7 +95,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentsByStatus(paymentStatus));
     }
 
-    @Operation(summary = "Get payments within a date range")
+    @Operation(summary = "Get payments within a date range — ADMIN only")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/date-range")
     public ResponseEntity<List<PaymentResponse>> getPaymentsByDateRange(
@@ -98,12 +108,14 @@ public class PaymentController {
     }
 
     @Operation(summary = "Refund a payment",
-            description = "Issues a full refund for a completed payment and cancels the booking. Seats are restored to the flight.")
+            description = "Issues a full refund and cancels the booking. CUSTOMER can only refund their own bookings.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Refund processed and booking cancelled"),
             @ApiResponse(responseCode = "400", description = "Payment cannot be refunded"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @PostMapping("/{transactionId}/refund")
     public ResponseEntity<PaymentResponse> refundPayment(
             @Parameter(description = "Transaction ID to refund") @PathVariable String transactionId) {

@@ -11,12 +11,12 @@ import org.springframework.stereotype.Component;
 
 /**
  * Seeds an initial admin account on first startup if none exists.
- * Default admin credentials:
- *   Email:    admin@airline.com
- *   Password: Admin@1234
-
- * IMPORTANT: Change the admin password immediately after first login in production.
- * Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables to override defaults.
+ * Requires two environment variables to be set:
+ *   ADMIN_EMAIL — the admin account email
+ *   ADMIN_PASSWORD — the admin account password (min 8 chars recommended)
+ * The app will refuse to start if either variable is missing.
+ * Set these in your .env file for local dev and in your platform's
+ * secret manager for production.
  */
 @Component
 @RequiredArgsConstructor
@@ -34,12 +34,24 @@ public class DataSeeder implements ApplicationRunner {
     private void seedAdminUser() {
         // Only seed if no admin exists
         if (!userRepository.findByRole(User.Role.ADMIN).isEmpty()) {
-            log.info("Admin account already exists — skipping seeder");
+            log.info("Admin account already exists - skipping seeder");
             return;
         }
 
-        String adminEmail = System.getenv().getOrDefault("ADMIN_EMAIL", "admin@airline.com");
-        String adminPassword = System.getenv().getOrDefault("ADMIN_PASSWORD", "Admin@1234");
+        // Fail loudly if env vars are not set — no fallback defaults
+        String adminEmail = System.getenv("ADMIN_EMAIL");
+        String adminPassword = System.getenv("ADMIN_PASSWORD");
+
+        if (adminEmail == null || adminEmail.isBlank()) {
+            throw new IllegalStateException(
+                    "ADMIN_EMAIL environment variable is not set. " +
+                            "Add it to your .env file and restart the application.");
+        }
+        if (adminPassword == null || adminPassword.isBlank()) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD environment variable is not set. " +
+                            "Add it to your .env file and restart the application.");
+        }
 
         User admin = User.builder()
                 .firstName("System")
@@ -54,9 +66,6 @@ public class DataSeeder implements ApplicationRunner {
                 .build();
 
         userRepository.save(admin);
-        log.warn("======================================================");
-        log.warn("Admin account created: {}", adminEmail);
-        log.warn("CHANGE THE DEFAULT PASSWORD IMMEDIATELY IN PRODUCTION");
-        log.warn("======================================================");
+        log.info("Admin account created: {}", adminEmail);
     }
 }

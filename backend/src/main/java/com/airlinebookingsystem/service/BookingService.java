@@ -13,6 +13,8 @@ import com.airlinebookingsystem.repository.UserRepository;
 import com.airlinebookingsystem.util.SeatClassUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,6 +96,7 @@ public class BookingService {
 
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
+        validateBookingOwnership(booking);
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
             throw new BookingException("Can only update PENDING bookings, current status: " + booking.getStatus());
@@ -141,10 +144,10 @@ public class BookingService {
 
     public BookingResponse getBookingByReference(String bookingReference) {
         log.info("Retrieving booking: {}", bookingReference);
-        return mapToBookingResponse(
-                bookingRepository.findByBookingReference(bookingReference)
-                        .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference))
-        );
+        Booking booking = bookingRepository.findByBookingReference(bookingReference)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
+        validateBookingOwnership(booking);
+        return mapToBookingResponse(booking);
     }
 
     public List<BookingResponse> getBookingsByUserId(Long userId) {
@@ -159,6 +162,7 @@ public class BookingService {
 
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
+        validateBookingOwnership(booking);
 
         if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
             return mapToBookingResponse(booking);
@@ -177,6 +181,7 @@ public class BookingService {
 
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingReference));
+        validateBookingOwnership(booking);
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
             throw new BookingException("Booking is already cancelled: " + bookingReference);
@@ -214,7 +219,29 @@ public class BookingService {
         return passengerService.getPassengersByBookingId(booking.getId());
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────────
+    // ---- Ownership validation ----
+
+    /**
+     * Validates that the current user owns the booking.
+     * ADMIN and AIRLINE_STAFF bypass this check.
+     */
+    private void validateBookingOwnership(Booking booking) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return;
+
+        boolean isPrivileged = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_AIRLINE_STAFF"));
+        if (isPrivileged) return;
+
+        String currentUserEmail = auth.getName();
+        if (!booking.getUser().getEmail().equals(currentUserEmail)) {
+            throw new com.airlinebookingsystem.exception.BookingException(
+                    "Access denied: you can only manage your own bookings");
+        }
+    }
+
+    // ---- Private helpers ----
 
     private void validateSeatAvailability(Flight flight, String seatClass, int requiredSeats) {
         Booking.SeatClass seatClassEnum = SeatClassUtils.parseSeatClass(seatClass);

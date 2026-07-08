@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * REST controller for user management.
  * Role access rules:
- *   ADMIN — full access to all endpoints
+ *   ADMIN  — full access to all endpoints
  *   AIRLINE_STAFF — read-only access to user list
  *   CUSTOMER — can only view and update their own profile
  */
@@ -68,7 +68,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.id.equals(#id)")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(
             @Parameter(description = "User ID") @PathVariable Long id) {
@@ -83,7 +83,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.id.equals(#id)")
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable Long id,

@@ -25,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
-@Tag(name = "Airports", description = "Search and retrieve airport data")
+@Tag(name = "Airports", description = "Search and manage airport data")
 public class AirportController {
 
     private final AirportService airportService;
@@ -72,15 +72,50 @@ public class AirportController {
                 .orElseThrow(() -> new ResourceNotFoundException("Airport", code)));
     }
 
-    @Operation(summary = "Create a new airport", description = "Requires authentication")
+    @Operation(summary = "Create a new airport",
+            description = "ADMIN or AIRLINE_STAFF only")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Airport created"),
-            @ApiResponse(responseCode = "400", description = "Validation failed")
+            @ApiResponse(responseCode = "400", description = "Validation failed"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
     @PostMapping
     public ResponseEntity<AirportResponse> createAirport(@Valid @RequestBody AirportRequest request) {
         log.info("POST /airports — code: {}", request.code());
         return ResponseEntity.status(HttpStatus.CREATED).body(airportService.saveAirport(request));
+    }
+
+    @Operation(summary = "Update an airport",
+            description = "ADMIN only. Note: IATA code cannot be changed — delete and recreate if needed.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Airport updated"),
+            @ApiResponse(responseCode = "400", description = "Validation failed"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Airport not found")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<AirportResponse> updateAirport(
+            @Parameter(description = "Airport ID") @PathVariable Long id,
+            @Valid @RequestBody AirportRequest request) {
+        log.info("PUT /airports/{}", id);
+        return ResponseEntity.ok(airportService.updateAirport(id, request));
+    }
+
+    @Operation(summary = "Delete an airport",
+            description = "ADMIN only. Cannot delete airports that have associated flights.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Airport deleted"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Airport not found")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAirport(
+            @Parameter(description = "Airport ID") @PathVariable Long id) {
+        log.info("DELETE /airports/{}", id);
+        airportService.deleteAirport(id);
+        return ResponseEntity.noContent().build();
     }
 }
