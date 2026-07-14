@@ -1,0 +1,256 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import type { FlightSearchRequestDto, SeatClass } from "../types/flight";
+
+const SEAT_CLASSES: { value: SeatClass; label: string }[] = [
+  { value: "ECONOMY", label: "Economy" },
+  { value: "BUSINESS", label: "Business" },
+  { value: "FIRST", label: "First" },
+];
+
+const POPULAR_ROUTES: { departureAirport: string; arrivalAirport: string }[] = [
+  { departureAirport: "DUB", arrivalAirport: "LHR" },
+  { departureAirport: "DUB", arrivalAirport: "CDG" },
+  { departureAirport: "LHR", arrivalAirport: "MAD" },
+  { departureAirport: "DUB", arrivalAirport: "BCN" },
+];
+
+function SelectChevron() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className="pointer-events-none absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+    >
+      <path
+        d="M6 9l6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function FieldShell({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="group flex flex-1 flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
+      <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+interface FlightSearchPanelProps {
+  onSearch: (request: FlightSearchRequestDto) => void;
+  isSearching: boolean;
+}
+
+export function FlightSearchPanel({
+  onSearch,
+  isSearching,
+}: FlightSearchPanelProps) {
+  const [request, setRequest] = useState<FlightSearchRequestDto>({
+    departureAirport: "DUB",
+    arrivalAirport: "LHR",
+    departureDate: "2026-08-01",
+    returnDate: null,
+    passengers: 1,
+    seatClass: "BUSINESS",
+    directFlightsOnly: false,
+  });
+
+  const handleSwap = () => {
+    setRequest((prev) => ({
+      ...prev,
+      departureAirport: prev.arrivalAirport,
+      arrivalAirport: prev.departureAirport,
+    }));
+  };
+
+  return (
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:p-8">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Book a flight
+          </h2>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Search live availability across the SkyAir network.
+          </p>
+        </div>
+        <span className="hidden rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:inline-flex">
+          Round trip
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
+          <FieldShell label="Origin">
+            <input
+              value={request.departureAirport}
+              onChange={(e) =>
+                setRequest((p) => ({
+                  ...p,
+                  departureAirport: e.target.value.toUpperCase().slice(0, 3),
+                }))
+              }
+              maxLength={3}
+              placeholder="LHR"
+              className="w-full bg-transparent font-mono text-xl font-semibold tracking-tight text-zinc-900 outline-none placeholder:text-zinc-300 dark:text-zinc-100 dark:placeholder:text-zinc-700"
+            />
+          </FieldShell>
+
+          <motion.button
+            type="button"
+            onClick={handleSwap}
+            whileTap={{ scale: 0.9, rotate: 180 }}
+            aria-label="Swap origin and destination"
+            className="z-10 flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:text-accent dark:border-white/10 dark:bg-obsidian-raised dark:text-zinc-400 sm:absolute sm:left-1/2 sm:-translate-x-1/2"
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M7 7h13M17 3l3 4-3 4M17 17H4M7 21l-3-4 3-4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </motion.button>
+
+          <FieldShell label="Destination">
+            <input
+              value={request.arrivalAirport}
+              onChange={(e) =>
+                setRequest((p) => ({
+                  ...p,
+                  arrivalAirport: e.target.value.toUpperCase().slice(0, 3),
+                }))
+              }
+              maxLength={3}
+              placeholder="JFK"
+              className="w-full bg-transparent font-mono text-xl font-semibold tracking-tight text-zinc-900 outline-none placeholder:text-zinc-300 dark:text-zinc-100 dark:placeholder:text-zinc-700"
+            />
+          </FieldShell>
+        </div>
+
+        <FieldShell label="Departure">
+          <input
+            type="date"
+            value={request.departureDate}
+            onChange={(e) =>
+              setRequest((p) => ({ ...p, departureDate: e.target.value }))
+            }
+            className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
+          />
+        </FieldShell>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <FieldShell label="Passengers">
+            <div className="relative pr-5">
+              <select
+                value={request.passengers}
+                onChange={(e) =>
+                  setRequest((p) => ({
+                    ...p,
+                    passengers: Number(e.target.value),
+                  }))
+                }
+                className="w-full appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
+              >
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? "passenger" : "passengers"}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          </FieldShell>
+
+          <FieldShell label="Cabin">
+            <div className="relative pr-5">
+              <select
+                value={request.seatClass}
+                onChange={(e) =>
+                  setRequest((p) => ({
+                    ...p,
+                    seatClass: e.target.value as SeatClass,
+                  }))
+                }
+                className="w-full appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
+              >
+                {SEAT_CLASSES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          </FieldShell>
+        </div>
+
+        <div className="pt-2">
+          <p className="mb-2.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Popular routes
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {POPULAR_ROUTES.map((route) => (
+              <button
+                key={`${route.departureAirport}-${route.arrivalAirport}`}
+                type="button"
+                onClick={() =>
+                  setRequest((p) => ({
+                    ...p,
+                    departureAirport: route.departureAirport,
+                    arrivalAirport: route.arrivalAirport,
+                  }))
+                }
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 font-mono text-xs font-medium text-zinc-600 transition-colors hover:border-accent/40 hover:text-accent dark:border-white/10 dark:text-zinc-400 dark:hover:border-accent/40"
+              >
+                {route.departureAirport} → {route.arrivalAirport}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <motion.button
+        type="button"
+        onClick={() => onSearch(request)}
+        disabled={isSearching}
+        whileHover={{ scale: isSearching ? 1 : 1.01 }}
+        whileTap={{ scale: isSearching ? 1 : 0.98 }}
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+      >
+        {isSearching ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-zinc-900/30 dark:border-t-zinc-900" />
+        ) : (
+          <>
+            Search flights
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M5 12h14M13 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </>
+        )}
+      </motion.button>
+    </div>
+  );
+}
