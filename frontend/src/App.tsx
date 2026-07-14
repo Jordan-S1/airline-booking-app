@@ -7,6 +7,7 @@ import { FlightStatusWidget } from "./components/FlightStatusWidget";
 import { WeatherWidget } from "./components/WeatherWidget";
 import { LoyaltyWidget } from "./components/LoyaltyWidget";
 import { FlightResultsList } from "./components/FlightResultsList";
+import { BookingModal } from "./components/BookingModal";
 import { mockFlightStatus, mockLoyalty } from "./data/mockFlight";
 import { searchFlights } from "./api/flights";
 import type {
@@ -22,6 +23,10 @@ function App() {
   const [outboundFlights, setOutboundFlights] = useState<
     FlightSearchResponseDto[]
   >([]);
+  const [lastSearchRequest, setLastSearchRequest] =
+    useState<FlightSearchRequestDto | null>(null);
+  const [selectedFlight, setSelectedFlight] =
+    useState<FlightSearchResponseDto | null>(null);
 
   const handleSearch = async (request: FlightSearchRequestDto) => {
     setSearchStatus("loading");
@@ -30,6 +35,7 @@ function App() {
     try {
       const result = await searchFlights(request);
       setOutboundFlights(result.outboundFlights);
+      setLastSearchRequest(request);
       setSearchStatus("success");
     } catch (err) {
       const message = axios.isAxiosError(err)
@@ -129,8 +135,18 @@ function App() {
           status={searchStatus}
           errorMessage={searchError}
           outboundFlights={outboundFlights}
+          onSelectFlight={setSelectedFlight}
         />
       </main>
+
+      {selectedFlight && lastSearchRequest && (
+        <BookingModal
+          flight={selectedFlight}
+          passengerCount={lastSearchRequest.passengers}
+          seatClass={lastSearchRequest.seatClass}
+          onClose={() => setSelectedFlight(null)}
+        />
+      )}
     </div>
   );
 }

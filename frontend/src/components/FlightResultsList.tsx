@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import type { FlightSearchResponseDto } from "../types/flight";
 
 function formatTime(iso: string) {
@@ -14,7 +15,13 @@ function formatDuration(minutes: number) {
   return `${h}h ${m}m`;
 }
 
-function FlightResultCard({ flight }: { flight: FlightSearchResponseDto }) {
+function FlightResultCard({
+  flight,
+  onSelect,
+}: {
+  flight: FlightSearchResponseDto;
+  onSelect: (flight: FlightSearchResponseDto) => void;
+}) {
   return (
     <motion.div
       layout
@@ -43,15 +50,7 @@ function FlightResultCard({ flight }: { flight: FlightSearchResponseDto }) {
           </div>
           <div className="flex flex-col items-center px-1 text-zinc-300 dark:text-zinc-600">
             <span className="text-[10px]">{formatDuration(flight.duration)}</span>
-            <svg viewBox="0 0 24 24" fill="none" className="h-3 w-8">
-              <path
-                d="M2 12h20M16 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <ArrowRight className="h-3 w-8" strokeWidth={1.5} />
           </div>
           <div>
             <p className="font-mono text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -75,6 +74,7 @@ function FlightResultCard({ flight }: { flight: FlightSearchResponseDto }) {
         </div>
         <button
           type="button"
+          onClick={() => onSelect(flight)}
           className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           Select
@@ -88,12 +88,14 @@ interface FlightResultsListProps {
   status: "idle" | "loading" | "error" | "success";
   errorMessage: string | null;
   outboundFlights: FlightSearchResponseDto[];
+  onSelectFlight: (flight: FlightSearchResponseDto) => void;
 }
 
 export function FlightResultsList({
   status,
   errorMessage,
   outboundFlights,
+  onSelectFlight,
 }: FlightResultsListProps) {
   if (status === "idle") return null;
 
@@ -129,7 +131,11 @@ export function FlightResultsList({
       {status === "success" && outboundFlights.length > 0 && (
         <div className="flex flex-col gap-3">
           {outboundFlights.map((flight) => (
-            <FlightResultCard key={flight.id} flight={flight} />
+            <FlightResultCard
+              key={flight.id}
+              flight={flight}
+              onSelect={onSelectFlight}
+            />
           ))}
         </div>
       )}

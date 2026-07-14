@@ -1,8 +1,4 @@
-import type {
-  FlightStatusDto,
-  LoyaltySummaryDto,
-  WeatherSnapshotDto,
-} from "../types/flight";
+import type { FlightStatusDto, LoyaltySummaryDto } from "../types/flight";
 
 /**
  * Structured exactly like the JSON a Spring Boot controller would return
@@ -36,15 +32,6 @@ export const mockFlightStatus: FlightStatusDto = {
   aircraftType: "Airbus A350-1000",
   altitudeFeet: 38000,
   speedKnots: 512,
-};
-
-export const mockWeather: WeatherSnapshotDto = {
-  airportCode: "JFK",
-  conditions: "Clear",
-  temperatureCelsius: 24,
-  windSpeedKph: 14,
-  visibilityKm: 16,
-  observedAt: "2026-07-10T13:10:00",
 };
 
 export const mockLoyalty: LoyaltySummaryDto = {

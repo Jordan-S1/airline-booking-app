@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { ArrowLeftRight, ArrowRight, ChevronDown } from "lucide-react";
+import { AirportAutocomplete } from "./AirportAutocomplete";
 import type { FlightSearchRequestDto, SeatClass } from "../types/flight";
 
 const SEAT_CLASSES: { value: SeatClass; label: string }[] = [
@@ -17,19 +19,10 @@ const POPULAR_ROUTES: { departureAirport: string; arrivalAirport: string }[] = [
 
 function SelectChevron() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
+    <ChevronDown
+      strokeWidth={1.8}
       className="pointer-events-none absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
-    >
-      <path
-        d="M6 9l6 6 6-6"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    />
   );
 }
 
@@ -95,20 +88,14 @@ export function FlightSearchPanel({
 
       <div className="flex flex-col gap-3">
         <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
-          <FieldShell label="Origin">
-            <input
-              value={request.departureAirport}
-              onChange={(e) =>
-                setRequest((p) => ({
-                  ...p,
-                  departureAirport: e.target.value.toUpperCase().slice(0, 3),
-                }))
-              }
-              maxLength={3}
-              placeholder="LHR"
-              className="w-full bg-transparent font-mono text-xl font-semibold tracking-tight text-zinc-900 outline-none placeholder:text-zinc-300 dark:text-zinc-100 dark:placeholder:text-zinc-700"
-            />
-          </FieldShell>
+          <AirportAutocomplete
+            label="Origin"
+            value={request.departureAirport}
+            onChange={(code) =>
+              setRequest((p) => ({ ...p, departureAirport: code }))
+            }
+            placeholder="LHR"
+          />
 
           <motion.button
             type="button"
@@ -117,31 +104,17 @@ export function FlightSearchPanel({
             aria-label="Swap origin and destination"
             className="z-10 flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:text-accent dark:border-white/10 dark:bg-obsidian-raised dark:text-zinc-400 sm:absolute sm:left-1/2 sm:-translate-x-1/2"
           >
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-              <path
-                d="M7 7h13M17 3l3 4-3 4M17 17H4M7 21l-3-4 3-4"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <ArrowLeftRight className="h-4 w-4" strokeWidth={1.8} />
           </motion.button>
 
-          <FieldShell label="Destination">
-            <input
-              value={request.arrivalAirport}
-              onChange={(e) =>
-                setRequest((p) => ({
-                  ...p,
-                  arrivalAirport: e.target.value.toUpperCase().slice(0, 3),
-                }))
-              }
-              maxLength={3}
-              placeholder="JFK"
-              className="w-full bg-transparent font-mono text-xl font-semibold tracking-tight text-zinc-900 outline-none placeholder:text-zinc-300 dark:text-zinc-100 dark:placeholder:text-zinc-700"
-            />
-          </FieldShell>
+          <AirportAutocomplete
+            label="Destination"
+            value={request.arrivalAirport}
+            onChange={(code) =>
+              setRequest((p) => ({ ...p, arrivalAirport: code }))
+            }
+            placeholder="JFK"
+          />
         </div>
 
         <FieldShell label="Departure">
@@ -239,15 +212,7 @@ export function FlightSearchPanel({
         ) : (
           <>
             Search flights
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-              <path
-                d="M5 12h14M13 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <ArrowRight className="h-4 w-4" strokeWidth={2} />
           </>
         )}
       </motion.button>

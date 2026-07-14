@@ -78,13 +78,16 @@ export interface FlightSearchResultDto {
   isRoundTrip: boolean;
 }
 
-export interface WeatherSnapshotDto {
-  airportCode: string;
-  conditions: string;
-  temperatureCelsius: number;
-  windSpeedKph: number;
-  visibilityKm: number;
-  observedAt: string;
+/** Mirrors com.airlinebookingsystem.dto.airport.AirportResponse. */
+export interface AirportResponseDto {
+  id: number;
+  code: string;
+  name: string;
+  city: string;
+  country: string;
+  timezone: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoyaltySummaryDto {

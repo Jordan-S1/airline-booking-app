@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
+import { Plane } from "lucide-react";
 import type { FlightStatus, FlightStatusDto } from "../types/flight";
 
 const STATUS_STYLES: Record<FlightStatus, string> = {
-  SCHEDULED:
-    "bg-zinc-100 text-zinc-600 dark:bg-white/5 dark:text-zinc-400",
+  SCHEDULED: "bg-zinc-100 text-zinc-600 dark:bg-white/5 dark:text-zinc-400",
   BOARDING:
     "bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
   DEPARTED: "bg-blue-100 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400",
@@ -104,12 +104,7 @@ export function FlightStatusWidget({ flight }: { flight: FlightStatusDto }) {
             animate={{ left: `calc(${progress}% - 14px)` }}
             transition={{ duration: 1.2, ease: "easeOut" }}
           >
-            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 rotate-90">
-              <path
-                d="M22 16.5v-2l-8.5-5V4a1.5 1.5 0 0 0-3 0v5.5L2 14.5v2l8.5-2.6V19l-2.5 1.8V22l3.5-1 3.5 1v-1.2L13 19v-5.1l9 2.6Z"
-                fill="currentColor"
-              />
-            </svg>
+            <Plane className="h-3.5 w-3.5 rotate-45" fill="currentColor" />
           </motion.div>
         </div>
 
