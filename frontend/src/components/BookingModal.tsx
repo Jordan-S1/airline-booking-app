@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { useCurrency } from "../lib/currency";
 import { createBooking, confirmBooking } from "../api/bookings";
 import { createPayment } from "../api/payments";
 import { AuthModal } from "./AuthModal";
@@ -26,6 +28,73 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "PAYPAL", label: "PayPal" },
   { value: "BANK_TRANSFER", label: "Bank transfer" },
 ];
+
+function GenderField({
+  value,
+  onChange,
+}: {
+  value: Gender;
+  onChange: (gender: Gender) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedLabel = GENDERS.find((g) => g.value === value)?.label ?? "";
+
+  return (
+    <div className="relative">
+      <label className="flex flex-col gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          Gender
+        </span>
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+          className="flex w-full cursor-pointer items-center justify-between text-sm font-medium text-zinc-900 dark:text-zinc-100"
+        >
+          {selectedLabel}
+          <ChevronDown
+            strokeWidth={1.8}
+            className={`h-3.5 w-3.5 text-zinc-400 transition-transform dark:text-zinc-500 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+      </label>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.ul
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 right-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-obsidian-raised"
+          >
+            {GENDERS.map((g) => (
+              <li key={g.value}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onChange(g.value);
+                    setIsOpen(false);
+                  }}
+                  className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    g.value === value
+                      ? "bg-accent/10 font-medium text-accent"
+                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {g.label}
+                </button>
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function emptyPassenger(): PassengerRequestDto {
   return {
@@ -61,6 +130,7 @@ export function BookingModal({
   onClose,
 }: BookingModalProps) {
   const { isAuthenticated, user } = useAuth();
+  const { formatPrice } = useCurrency();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [step, setStep] = useState<Step>("passengers");
   const [passengers, setPassengers] = useState<PassengerRequestDto[]>(() =>
@@ -101,7 +171,9 @@ export function BookingModal({
       setConfirmedBooking(confirmed);
       setStep("confirmation");
     } catch (err) {
-      setError(extractErrorMessage(err, "Something went wrong with your booking."));
+      setError(
+        extractErrorMessage(err, "Something went wrong with your booking."),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -176,7 +248,7 @@ export function BookingModal({
                         updatePassenger(index, "firstName", e.target.value)
                       }
                       placeholder="First name"
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
                     />
                     <input
                       value={passenger.lastName}
@@ -184,36 +256,34 @@ export function BookingModal({
                         updatePassenger(index, "lastName", e.target.value)
                       }
                       placeholder="Last name"
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
                     />
-                    <input
-                      type="date"
-                      value={passenger.dateOfBirth}
-                      onChange={(e) =>
-                        updatePassenger(index, "dateOfBirth", e.target.value)
-                      }
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 [color-scheme:light] dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100 dark:[color-scheme:dark]"
-                    />
-                    <select
+                    <label className="flex flex-col gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        Date of birth
+                      </span>
+                      <input
+                        type="date"
+                        value={passenger.dateOfBirth}
+                        onChange={(e) =>
+                          updatePassenger(index, "dateOfBirth", e.target.value)
+                        }
+                        className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
+                      />
+                    </label>
+                    <GenderField
                       value={passenger.gender}
-                      onChange={(e) =>
-                        updatePassenger(index, "gender", e.target.value)
+                      onChange={(gender) =>
+                        updatePassenger(index, "gender", gender)
                       }
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
-                    >
-                      {GENDERS.map((g) => (
-                        <option key={g.value} value={g.value}>
-                          {g.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                     <input
                       value={passenger.passportNumber}
                       onChange={(e) =>
                         updatePassenger(index, "passportNumber", e.target.value)
                       }
                       placeholder="Passport number"
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
                     />
                     <input
                       value={passenger.nationality}
@@ -221,7 +291,7 @@ export function BookingModal({
                         updatePassenger(index, "nationality", e.target.value)
                       }
                       placeholder="Nationality"
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
                     />
                   </div>
                 </div>
@@ -243,10 +313,10 @@ export function BookingModal({
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500 dark:text-zinc-400">
                     {passengerCount} × {seatClass.toLowerCase()} ·{" "}
-                    ${flight.price.toLocaleString()}
+                    {formatPrice(flight.price)}
                   </span>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    ${totalAmount.toLocaleString()}
+                    {formatPrice(totalAmount)}
                   </span>
                 </div>
               </div>
@@ -296,7 +366,7 @@ export function BookingModal({
                   {isSubmitting ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-zinc-900/30 dark:border-t-zinc-900" />
                   ) : (
-                    `Pay $${totalAmount.toLocaleString()}`
+                    `Pay ${formatPrice(totalAmount)}`
                   )}
                 </button>
               </div>
@@ -317,13 +387,22 @@ export function BookingModal({
                   {confirmedBooking.userEmail}.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-              >
-                Done
-              </button>
+              <div className="flex w-full gap-3">
+                <Link
+                  to={`/booking/${confirmedBooking.bookingReference}`}
+                  onClick={onClose}
+                  className="flex-1 rounded-xl bg-zinc-900 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                >
+                  View booking
+                </Link>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 cursor-pointer rounded-xl border border-zinc-200 py-3 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-white/10 dark:text-zinc-200 dark:hover:bg-white/5"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           )}
         </motion.div>

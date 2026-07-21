@@ -11,5 +11,6 @@ public record UserUpdateRequest(
         String address,
         String city,
         String country,
-        String postalCode
+        String postalCode,
+        String preferredCurrency
 ) {}

@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final CurrencyService currencyService;
 
     @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
@@ -85,6 +86,13 @@ public class UserService implements UserDetailsService {
         if (request.city() != null) user.setCity(request.city());
         if (request.country() != null) user.setCountry(request.country());
         if (request.postalCode() != null) user.setPostalCode(request.postalCode());
+        if (request.preferredCurrency() != null) {
+            String currency = request.preferredCurrency().toUpperCase();
+            if (!currencyService.isSupported(currency)) {
+                throw new IllegalArgumentException("Unsupported currency: " + request.preferredCurrency());
+            }
+            user.setPreferredCurrency(currency);
+        }
 
         log.info("Updated profile for user ID: {}", id);
         return mapToUserResponse(userRepository.save(user));
@@ -186,6 +194,7 @@ public class UserService implements UserDetailsService {
                 user.getCity(),
                 user.getCountry(),
                 user.getPostalCode(),
+                user.getPreferredCurrency(),
                 user.getRole().name(),
                 user.isEnabled(),
                 user.getCreatedAt(),

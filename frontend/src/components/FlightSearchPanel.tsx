@@ -139,7 +139,7 @@ export function FlightSearchPanel({
                     passengers: Number(e.target.value),
                   }))
                 }
-                className="w-full appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
+                className="w-full appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900 cursor-pointer"
               >
                 {[1, 2, 3, 4, 5, 6].map((n) => (
                   <option key={n} value={n}>
@@ -161,7 +161,7 @@ export function FlightSearchPanel({
                     seatClass: e.target.value as SeatClass,
                   }))
                 }
-                className="w-full appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
+                className="w-full appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900 cursor-pointer"
               >
                 {SEAT_CLASSES.map((c) => (
                   <option key={c.value} value={c.value}>
@@ -205,7 +205,7 @@ export function FlightSearchPanel({
         disabled={isSearching}
         whileHover={{ scale: isSearching ? 1 : 1.01 }}
         whileTap={{ scale: isSearching ? 1 : 0.98 }}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 cursor-pointer"
       >
         {isSearching ? (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-zinc-900/30 dark:border-t-zinc-900" />

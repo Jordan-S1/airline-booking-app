@@ -21,4 +21,5 @@ export interface AuthResponseDto {
   lastName: string;
   role: string;
   userId: number;
+  preferredCurrency: string;
 }

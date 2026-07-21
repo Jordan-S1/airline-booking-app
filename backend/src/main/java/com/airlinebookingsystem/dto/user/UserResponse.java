@@ -12,6 +12,7 @@ public record UserResponse(
         String city,
         String country,
         String postalCode,
+        String preferredCurrency,
         String role,
         Boolean enabled,
         LocalDateTime createdAt,

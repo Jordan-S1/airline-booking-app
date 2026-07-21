@@ -84,6 +84,7 @@ public class AuthService {
                                 .lastName(user.getLastName())
                                 .role(user.getRole().name())
                                 .userId(user.getId())
+                                .preferredCurrency(user.getPreferredCurrency())
                                 .build();
         }
 }

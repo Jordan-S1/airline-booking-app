@@ -10,3 +10,8 @@ export async function searchAirports(
   );
   return data;
 }
+
+export async function getAllAirports(): Promise<AirportResponseDto[]> {
+  const { data } = await apiClient.get<AirportResponseDto[]>("/airports");
+  return data;
+}

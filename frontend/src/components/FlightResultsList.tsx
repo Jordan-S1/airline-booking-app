@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { useCurrency } from "../lib/currency";
 import type { FlightSearchResponseDto } from "../types/flight";
 
 function formatTime(iso: string) {
@@ -22,6 +23,7 @@ function FlightResultCard({
   flight: FlightSearchResponseDto;
   onSelect: (flight: FlightSearchResponseDto) => void;
 }) {
+  const { formatPrice } = useCurrency();
   return (
     <motion.div
       layout
@@ -49,7 +51,9 @@ function FlightResultCard({
             </p>
           </div>
           <div className="flex flex-col items-center px-1 text-zinc-300 dark:text-zinc-600">
-            <span className="text-[10px]">{formatDuration(flight.duration)}</span>
+            <span className="text-[10px]">
+              {formatDuration(flight.duration)}
+            </span>
             <ArrowRight className="h-3 w-8" strokeWidth={1.5} />
           </div>
           <div>
@@ -66,7 +70,7 @@ function FlightResultCard({
       <div className="flex items-center justify-between gap-4 sm:justify-end">
         <div className="text-right">
           <p className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            ${flight.price.toLocaleString()}
+            {formatPrice(flight.price)}
           </p>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
             {flight.availableSeats} seats left
@@ -75,7 +79,7 @@ function FlightResultCard({
         <button
           type="button"
           onClick={() => onSelect(flight)}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 cursor-pointer"
         >
           Select
         </button>

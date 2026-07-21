@@ -90,6 +90,14 @@ public class User implements UserDetails {
     private String postalCode;
 
     /**
+     * User's preferred display currency (ISO code, e.g. "EUR", "GBP").
+     * Base currency is EUR; this only affects how prices are displayed.
+     */
+    @Builder.Default
+    @Column(nullable = false, length = 3)
+    private String preferredCurrency = "EUR";
+
+    /**
      * User's role in the system (CUSTOMER, ADMIN, or AIRLINE_STAFF).
      */
     @Builder.Default

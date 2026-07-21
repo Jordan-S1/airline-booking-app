@@ -7,7 +7,11 @@ import {
 } from "react";
 import * as authApi from "../api/auth";
 import { setAuthToken } from "./authToken";
-import type { LoginRequestDto, RegisterRequestDto } from "../types/auth";
+import type {
+  AuthResponseDto,
+  LoginRequestDto,
+  RegisterRequestDto,
+} from "../types/auth";
 
 const USER_STORAGE_KEY = "skyair-auth-user";
 
@@ -17,6 +21,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: string;
+  preferredCurrency: string;
 }
 
 interface AuthContextValue {
@@ -25,6 +30,8 @@ interface AuthContextValue {
   login: (request: LoginRequestDto) => Promise<void>;
   register: (request: RegisterRequestDto) => Promise<void>;
   logout: () => void;
+  /** Patch the cached user after a profile update, keeping local state in sync. */
+  updateStoredUser: (patch: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -42,20 +49,14 @@ function readStoredUser(): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStoredUser);
 
-  const applyAuthResponse = (response: {
-    token: string;
-    userId: number;
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-  }) => {
+  const applyAuthResponse = (response: AuthResponseDto) => {
     const nextUser: AuthUser = {
       userId: response.userId,
       email: response.email,
       firstName: response.firstName,
       lastName: response.lastName,
       role: response.role,
+      preferredCurrency: response.preferredCurrency ?? "EUR",
     };
     setAuthToken(response.token);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
@@ -78,6 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthToken(null);
         localStorage.removeItem(USER_STORAGE_KEY);
         setUser(null);
+      },
+      updateStoredUser: (patch) => {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, ...patch };
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next));
+          return next;
+        });
       },
     }),
     [user],
