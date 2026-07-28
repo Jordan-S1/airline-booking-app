@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Repository interface for managing Flight entities in the database.
@@ -19,12 +18,29 @@ import java.util.Optional;
 public interface FlightRepository extends JpaRepository<Flight, Long> {
 
     /**
-     * Finds a flight by its unique flight number.
+     * Finds every dated instance of a flight number, earliest first.
+     *
+     * <p>Since V7 a flight number is only unique per departure time — the same
+     * service runs daily — so callers wanting "the" flight must choose an
+     * instance (normally the next upcoming one).
      *
      * @param flightNumber the flight number to search for
-     * @return an Optional containing the flight if found, or empty if not found
+     * @return all instances of that flight number, ordered by departure time
      */
-    Optional<Flight> findByFlightNumber(String flightNumber);
+    List<Flight> findByFlightNumberOrderByDepartureTimeAsc(String flightNumber);
+
+    /**
+     * Checks whether a specific dated instance already exists, used to reject
+     * duplicates when creating a flight.
+     */
+    boolean existsByFlightNumberAndDepartureTime(String flightNumber, LocalDateTime departureTime);
+
+    /**
+     * Finds flights that departed before the cutoff and were never booked.
+     * These are safe to delete; booked flights are retained as history.
+     */
+    @Query("SELECT f FROM Flight f WHERE f.departureTime < :cutoff AND f.bookings IS EMPTY")
+    List<Flight> findPrunableFlights(@Param("cutoff") LocalDateTime cutoff);
 
     /**
      * Finds available flights matching the specified criteria.
@@ -84,4 +100,19 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
      */
     @Query("SELECT f FROM Flight f WHERE f.departureTime > :now AND f.active = true")
     List<Flight> findUpcomingFlights(@Param("now") LocalDateTime now);
+
+    /**
+     * Retrieves upcoming active flights arriving at a given airport, from any
+     * origin. Backs the "flights to this destination" view, which — unlike
+     * search — has no origin to filter on.
+     *
+     * @param arrivalCode IATA code of the destination airport
+     * @param now         the current datetime to compare against
+     * @return upcoming arrivals at that airport, earliest departure first
+     */
+    @Query("SELECT f FROM Flight f WHERE f.arrivalAirport.code = :arrivalCode " +
+            "AND f.departureTime > :now AND f.active = true " +
+            "ORDER BY f.departureTime ASC")
+    List<Flight> findUpcomingArrivals(@Param("arrivalCode") String arrivalCode,
+                                      @Param("now") LocalDateTime now);
 }

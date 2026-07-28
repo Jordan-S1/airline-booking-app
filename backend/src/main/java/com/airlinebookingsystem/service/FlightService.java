@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,10 +50,27 @@ public class FlightService {
         return flightRepository.findById(id).map(this::mapToFlightResponse);
     }
 
+    /**
+     * Looks up a flight number. The same service runs on many dates, so this
+     * resolves to the next upcoming instance, falling back to the most recent
+     * past one when the service is no longer scheduled.
+     */
     @Transactional(readOnly = true)
     public Optional<FlightResponse> getFlightByNumber(String flightNumber) {
         log.info("Fetching flight with number: {}", flightNumber);
-        return flightRepository.findByFlightNumber(flightNumber).map(this::mapToFlightResponse);
+
+        List<Flight> instances =
+                flightRepository.findByFlightNumberOrderByDepartureTimeAsc(flightNumber);
+        if (instances.isEmpty()) {
+            return Optional.empty();
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        return instances.stream()
+                .filter(f -> f.getDepartureTime().isAfter(now))
+                .findFirst()
+                .or(() -> Optional.of(instances.get(instances.size() - 1)))
+                .map(this::mapToFlightResponse);
     }
 
     @Transactional(readOnly = true)
@@ -95,10 +113,67 @@ public class FlightService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Upcoming flights arriving at an airport, from anywhere in the network.
+     * Used by the destination view, where the traveller has picked a place to
+     * go but not yet an origin.
+     */
+    @Transactional(readOnly = true)
+    public List<FlightSearchResponse> getUpcomingArrivals(String airportCode) {
+        String normalizedCode = airportCode.toUpperCase();
+        log.info("Fetching upcoming arrivals at: {}", normalizedCode);
+
+        return flightRepository.findUpcomingArrivals(normalizedCode, LocalDateTime.now())
+                .stream()
+                .map(flight -> mapToFlightSearchResponse(flight, "ALL"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Searches each leg of a multi-city itinerary independently, preserving the
+     * order the legs were submitted in. Each leg reuses the same one-way search
+     * as a simple search, so availability rules stay consistent.
+     */
+    @Transactional(readOnly = true)
+    public MultiCitySearchResult searchMultiCity(MultiCitySearchRequest request) {
+        log.info("Multi-city search across {} legs", request.legs().size());
+
+        List<MultiCitySearchResult.LegResult> results = new ArrayList<>();
+        int legNumber = 1;
+
+        for (MultiCitySearchRequest.Leg leg : request.legs()) {
+            List<FlightSearchResponse> flights = searchFlightsOneWay(
+                    leg.departureAirport(), leg.arrivalAirport(),
+                    leg.departureDate(), request.passengers(),
+                    request.seatClass(), request.directFlightsOnly());
+
+            results.add(new MultiCitySearchResult.LegResult(
+                    legNumber++,
+                    leg.departureAirport().toUpperCase(),
+                    leg.arrivalAirport().toUpperCase(),
+                    leg.departureDate(),
+                    flights));
+        }
+
+        return new MultiCitySearchResult(results);
+    }
+
+    /**
+     * Live status for a single flight, derived from its timetable at request time.
+     */
+    @Transactional(readOnly = true)
+    public Optional<FlightStatusResponse> getFlightStatus(@NonNull Long id) {
+        log.info("Fetching live status for flight ID: {}", id);
+        return flightRepository.findById(id).map(this::mapToFlightStatusResponse);
+    }
+
     public FlightResponse createFlight(FlightRequest request) {
-        // Validate no duplicate flight number
-        if (flightRepository.findByFlightNumber(request.flightNumber()).isPresent()) {
-            throw new DuplicateResourceException("Flight number", request.flightNumber());
+        // A flight number may repeat across dates, so only the same number at
+        // the same departure time counts as a duplicate.
+        if (flightRepository.existsByFlightNumberAndDepartureTime(
+                request.flightNumber(), request.departureTime())) {
+            throw new DuplicateResourceException(
+                    "Flight number", request.flightNumber() + " at " + request.departureTime());
         }
 
         Airline airline = airlineRepository.findByCode(request.airlineCode().toUpperCase())
@@ -268,6 +343,70 @@ public class FlightService {
                 flight.getCreatedAt(),
                 flight.getUpdatedAt()
         );
+    }
+
+    /** How long before departure a flight is considered to be boarding. */
+    private static final int BOARDING_WINDOW_MINUTES = 45;
+
+    private FlightStatusResponse mapToFlightStatusResponse(Flight flight) {
+        LocalDateTime now = LocalDateTime.now();
+        String status = deriveStatus(flight, now);
+        int progress = "CANCELLED".equals(status) ? 0 : deriveProgress(flight, now);
+
+        return new FlightStatusResponse(
+                flight.getId(),
+                flight.getFlightNumber(),
+                flight.getAirline().getName(),
+                flight.getDepartureAirport().getCode(),
+                flight.getDepartureAirport().getCity(),
+                flight.getDepartureAirport().getLatitude(),
+                flight.getDepartureAirport().getLongitude(),
+                flight.getArrivalAirport().getCode(),
+                flight.getArrivalAirport().getCity(),
+                flight.getArrivalAirport().getLatitude(),
+                flight.getArrivalAirport().getLongitude(),
+                flight.getDepartureTime(),
+                flight.getArrivalTime(),
+                flight.getDuration(),
+                status,
+                progress,
+                flight.getGate(),
+                flight.getTerminal(),
+                flight.getAircraft()
+        );
+    }
+
+    /**
+     * Derives the live status from the timetable. A persisted CANCELLED/DELAYED
+     * state always wins, since those are airline decisions rather than a
+     * function of the clock.
+     */
+    private String deriveStatus(Flight flight, LocalDateTime now) {
+        if (flight.getStatus() == Flight.FlightStatus.CANCELLED) return "CANCELLED";
+        if (flight.getStatus() == Flight.FlightStatus.DELAYED) return "DELAYED";
+
+        LocalDateTime departure = flight.getDepartureTime();
+        LocalDateTime arrival = flight.getArrivalTime();
+
+        if (now.isBefore(departure.minusMinutes(BOARDING_WINDOW_MINUTES))) return "SCHEDULED";
+        if (now.isBefore(departure)) return "BOARDING";
+        if (now.isBefore(arrival)) return "IN_AIR";
+        return "LANDED";
+    }
+
+    /** 0 before departure, 100 after arrival, linear in between. */
+    private int deriveProgress(Flight flight, LocalDateTime now) {
+        LocalDateTime departure = flight.getDepartureTime();
+        LocalDateTime arrival = flight.getArrivalTime();
+
+        if (!now.isAfter(departure)) return 0;
+        if (!now.isBefore(arrival)) return 100;
+
+        long totalSeconds = ChronoUnit.SECONDS.between(departure, arrival);
+        if (totalSeconds <= 0) return 100;
+
+        long elapsedSeconds = ChronoUnit.SECONDS.between(departure, now);
+        return (int) Math.round((elapsedSeconds * 100.0) / totalSeconds);
     }
 
     private FlightSearchResponse mapToFlightSearchResponse(Flight flight, String seatClass) {

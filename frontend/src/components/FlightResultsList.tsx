@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { useCurrency } from "../lib/currency";
 import type { FlightSearchResponseDto } from "../types/flight";
 
@@ -19,9 +19,13 @@ function formatDuration(minutes: number) {
 function FlightResultCard({
   flight,
   onSelect,
+  isSelected,
+  selectLabel,
 }: {
   flight: FlightSearchResponseDto;
   onSelect: (flight: FlightSearchResponseDto) => void;
+  isSelected: boolean;
+  selectLabel: string;
 }) {
   const { formatPrice } = useCurrency();
   return (
@@ -29,7 +33,11 @@ function FlightResultCard({
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 sm:flex-row sm:items-center sm:justify-between"
+      className={`flex flex-col gap-4 rounded-xl border bg-white p-4 transition-colors dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between ${
+        isSelected
+          ? "border-accent/50 ring-1 ring-accent/30"
+          : "border-zinc-200 hover:border-zinc-300 dark:border-white/10 dark:hover:border-white/20"
+      }`}
     >
       <div className="flex items-center gap-4">
         <div>
@@ -79,29 +87,53 @@ function FlightResultCard({
         <button
           type="button"
           onClick={() => onSelect(flight)}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 cursor-pointer"
+          className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            isSelected
+              ? "bg-accent/10 text-accent"
+              : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          }`}
         >
-          Select
+          {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}
+          {isSelected ? "Selected" : selectLabel}
         </button>
       </div>
     </motion.div>
   );
 }
 
+export interface ResultSection {
+  /** Stable key — the leg index for multi-city, or "outbound"/"return". */
+  id: string;
+  title: string;
+  subtitle?: string;
+  flights: FlightSearchResponseDto[];
+  selectedFlightId?: number | null;
+}
+
 interface FlightResultsListProps {
   status: "idle" | "loading" | "error" | "success";
   errorMessage: string | null;
-  outboundFlights: FlightSearchResponseDto[];
-  onSelectFlight: (flight: FlightSearchResponseDto) => void;
+  sections: ResultSection[];
+  onSelectFlight: (sectionId: string, flight: FlightSearchResponseDto) => void;
+  /** Rendered under the sections — e.g. the multi-leg "continue" bar. */
+  footer?: React.ReactNode;
+  /** Defaults to "Search results"; overridden when reused outside the dashboard. */
+  heading?: string;
+  emptyMessage?: string;
 }
 
 export function FlightResultsList({
   status,
   errorMessage,
-  outboundFlights,
+  sections,
   onSelectFlight,
+  footer,
+  heading = "Search results",
+  emptyMessage = "No flights found for this route and date.",
 }: FlightResultsListProps) {
   if (status === "idle") return null;
+
+  const isMultiSection = sections.length > 1;
 
   return (
     <motion.div
@@ -110,7 +142,7 @@ export function FlightResultsList({
       className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:p-8"
     >
       <h2 className="mb-4 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-        Search results
+        {heading}
       </h2>
 
       {status === "loading" && (
@@ -126,21 +158,44 @@ export function FlightResultsList({
         </p>
       )}
 
-      {status === "success" && outboundFlights.length === 0 && (
-        <p className="py-6 text-sm text-zinc-500 dark:text-zinc-400">
-          No flights found for this route and date.
-        </p>
-      )}
+      {status === "success" && (
+        <div className="flex flex-col gap-8">
+          {sections.map((section) => (
+            <div key={section.id}>
+              {isMultiSection && (
+                <div className="mb-3 flex items-baseline justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {section.title}
+                  </h3>
+                  {section.subtitle && (
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                      {section.subtitle}
+                    </span>
+                  )}
+                </div>
+              )}
 
-      {status === "success" && outboundFlights.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {outboundFlights.map((flight) => (
-            <FlightResultCard
-              key={flight.id}
-              flight={flight}
-              onSelect={onSelectFlight}
-            />
+              {section.flights.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+                  {emptyMessage}
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {section.flights.map((flight) => (
+                    <FlightResultCard
+                      key={flight.id}
+                      flight={flight}
+                      isSelected={section.selectedFlightId === flight.id}
+                      selectLabel={isMultiSection ? "Select" : "Book"}
+                      onSelect={(f) => onSelectFlight(section.id, f)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
+
+          {footer}
         </div>
       )}
     </motion.div>

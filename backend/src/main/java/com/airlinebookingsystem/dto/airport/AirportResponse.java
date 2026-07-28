@@ -1,5 +1,6 @@
 package com.airlinebookingsystem.dto.airport;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -14,6 +15,8 @@ public record AirportResponse(
         String city,
         String country,
         String timezone,
+        BigDecimal latitude,
+        BigDecimal longitude,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}

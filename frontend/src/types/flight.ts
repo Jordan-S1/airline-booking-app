@@ -16,30 +16,31 @@ export type FlightStatus =
 /** Mirrors com.airlinebookingsystem.entity.Booking.SeatClass on the backend. */
 export type SeatClass = "ECONOMY" | "BUSINESS" | "FIRST";
 
-export interface AirportDto {
-  code: string;
-  city: string;
-  country: string;
-  timezone: string;
-}
-
+/**
+ * Mirrors com.airlinebookingsystem.dto.flight.FlightStatusResponse.
+ * `status` and `progressPercentage` are computed server-side from the
+ * flight's timetable at request time.
+ */
 export interface FlightStatusDto {
   id: number;
   flightNumber: string;
-  airline: string;
-  origin: AirportDto;
-  destination: AirportDto;
-  scheduledDeparture: string;
-  scheduledArrival: string;
-  estimatedDeparture: string;
-  estimatedArrival: string;
+  airlineName: string;
+  departureAirport: string;
+  departureCity: string;
+  departureLatitude: number | null;
+  departureLongitude: number | null;
+  arrivalAirport: string;
+  arrivalCity: string;
+  arrivalLatitude: number | null;
+  arrivalLongitude: number | null;
+  departureTime: string;
+  arrivalTime: string;
+  duration: number;
   status: FlightStatus;
   progressPercentage: number;
-  gate: string;
-  terminal: string;
-  aircraftType: string;
-  altitudeFeet: number;
-  speedKnots: number;
+  gate: string | null;
+  terminal: string | null;
+  aircraft: string | null;
 }
 
 /** Mirrors com.airlinebookingsystem.dto.flight.FlightSearchRequest. */
@@ -86,13 +87,35 @@ export interface AirportResponseDto {
   city: string;
   country: string;
   timezone: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface LoyaltySummaryDto {
-  memberTier: "SILVER" | "GOLD" | "PLATINUM" | "OBSIDIAN";
-  milesBalance: number;
-  milesToNextTier: number;
-  upcomingTripCount: number;
+/** Mirrors com.airlinebookingsystem.dto.flight.MultiCitySearchRequest. */
+export interface MultiCityLegRequestDto {
+  departureAirport: string;
+  arrivalAirport: string;
+  departureDate: string;
+}
+
+export interface MultiCitySearchRequestDto {
+  legs: MultiCityLegRequestDto[];
+  passengers: number;
+  seatClass: SeatClass;
+  directFlightsOnly: boolean;
+}
+
+/** Mirrors com.airlinebookingsystem.dto.flight.MultiCitySearchResult. */
+export interface MultiCityLegResultDto {
+  legNumber: number;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureDate: string;
+  flights: FlightSearchResponseDto[];
+}
+
+export interface MultiCitySearchResultDto {
+  legs: MultiCityLegResultDto[];
 }

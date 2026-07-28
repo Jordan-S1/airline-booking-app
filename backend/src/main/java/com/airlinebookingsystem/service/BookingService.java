@@ -274,6 +274,7 @@ public class BookingService {
         return new BookingResponse(
                 booking.getId(),
                 booking.getBookingReference(),
+                booking.getFlight().getId(),
                 booking.getFlight().getFlightNumber(),
                 booking.getFlight().getDepartureAirport().getCode(),
                 booking.getFlight().getArrivalAirport().getCode(),

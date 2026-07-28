@@ -66,6 +66,21 @@ public class FlightController {
                 .orElseThrow(() -> new ResourceNotFoundException("Flight", flightNumber)));
     }
 
+    @Operation(summary = "Get live status for a flight",
+            description = "Returns the flight's current status and progress, derived from its timetable at request time.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Status returned"),
+            @ApiResponse(responseCode = "404", description = "Flight not found")
+    })
+    @SecurityRequirements
+    @GetMapping("/{id}/status")
+    public ResponseEntity<FlightStatusResponse> getFlightStatus(
+            @Parameter(description = "Flight ID") @PathVariable Long id) {
+        log.info("GET /flights/{}/status", id);
+        return ResponseEntity.ok(flightService.getFlightStatus(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Flight", id)));
+    }
+
     @Operation(summary = "Search available flights",
             description = "Search by origin, destination, date, passengers, and seat class")
     @ApiResponses({
@@ -80,12 +95,37 @@ public class FlightController {
         return ResponseEntity.ok(flightService.searchFlights(request));
     }
 
+    @Operation(summary = "Search a multi-city itinerary",
+            description = "Searches each leg independently (2-5 legs). Returns one result set per leg, in submission order.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Search results returned"),
+            @ApiResponse(responseCode = "400", description = "Fewer than two legs, or a leg is invalid"),
+            @ApiResponse(responseCode = "404", description = "Airport not found")
+    })
+    @SecurityRequirements
+    @PostMapping("/search/multi-city")
+    public ResponseEntity<MultiCitySearchResult> searchMultiCity(
+            @Valid @RequestBody MultiCitySearchRequest request) {
+        log.info("POST /flights/search/multi-city — {} legs", request.legs().size());
+        return ResponseEntity.ok(flightService.searchMultiCity(request));
+    }
+
     @Operation(summary = "Get upcoming flights")
     @SecurityRequirements
     @GetMapping("/upcoming")
     public ResponseEntity<List<FlightSearchResponse>> getUpcomingFlights() {
         log.info("GET /flights/upcoming");
         return ResponseEntity.ok(flightService.getUpcomingFlights());
+    }
+
+    @Operation(summary = "Get upcoming arrivals at an airport",
+            description = "Upcoming flights arriving at the given airport from any origin, earliest first.")
+    @SecurityRequirements
+    @GetMapping("/arrivals/{airportCode}")
+    public ResponseEntity<List<FlightSearchResponse>> getUpcomingArrivals(
+            @Parameter(description = "IATA airport code e.g. CDG") @PathVariable @NotBlank String airportCode) {
+        log.info("GET /flights/arrivals/{}", airportCode);
+        return ResponseEntity.ok(flightService.getUpcomingArrivals(airportCode));
     }
 
     @Operation(summary = "Get flights by airline code")

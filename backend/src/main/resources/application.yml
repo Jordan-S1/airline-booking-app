@@ -35,6 +35,32 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION_MS:86400000}
 
+# Rolling flight schedule
+# Each distinct flight number is treated as a daily service and materialised
+# across the horizon, so the app always has bookable inventory. Past flights
+# are pruned only when they were never booked.
+flights:
+  schedule:
+    enabled: ${FLIGHT_SCHEDULE_ENABLED:true}
+    horizon-days: ${FLIGHT_SCHEDULE_HORIZON_DAYS:14}
+    retention-days: ${FLIGHT_SCHEDULE_RETENTION_DAYS:3}
+    cron: ${FLIGHT_SCHEDULE_CRON:0 15 3 * * *}
+
+# OpenSky Network — live ADS-B traffic (no API key required)
+# The anonymous tier allows 400 credits/day and a bounding-box request costs
+# 1-4 credits by area, so keep the box small and the cache TTL generous.
+# Defaults below cover Ireland & the UK, matching the busiest seeded routes.
+opensky:
+  base-url: ${OPENSKY_BASE_URL:https://opensky-network.org/api}
+  region-name: ${OPENSKY_REGION_NAME:Ireland & UK}
+  cache-ttl-seconds: ${OPENSKY_CACHE_TTL_SECONDS:600}
+  max-results: ${OPENSKY_MAX_RESULTS:20}
+  bbox:
+    lamin: ${OPENSKY_BBOX_LAMIN:49.0}
+    lomin: ${OPENSKY_BBOX_LOMIN:-11.0}
+    lamax: ${OPENSKY_BBOX_LAMAX:56.0}
+    lomax: ${OPENSKY_BBOX_LOMAX:2.0}
+
 # Swagger / OpenAPI
 springdoc:
   api-docs:

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MapPin, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
+import { LiveTrafficWidget } from "../components/LiveTrafficWidget";
 import { getAllAirports } from "../api/airports";
 import type { AirportResponseDto } from "../types/flight";
 
@@ -29,6 +30,14 @@ export function ExplorePage() {
         subtitle="Browse every airport in the SkyAir network and start planning your next trip."
       />
 
+      <div className="mb-10">
+        <LiveTrafficWidget />
+      </div>
+
+      <h2 className="mb-4 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+        All destinations
+      </h2>
+
       {status === "loading" && (
         <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-accent dark:border-white/20" />
@@ -52,7 +61,7 @@ export function ExplorePage() {
               transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.4) }}
             >
               <Link
-                to="/dashboard"
+                to={`/explore/${airport.code}`}
                 className="group flex h-full flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:border-accent/40 dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none dark:hover:border-accent/40"
               >
                 <div className="flex items-start justify-between">

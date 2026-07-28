@@ -98,6 +98,8 @@ public class AirportService {
                 airport.getCity(),
                 airport.getCountry(),
                 airport.getTimezone(),
+                airport.getLatitude(),
+                airport.getLongitude(),
                 airport.getCreatedAt(),
                 airport.getUpdatedAt()
         );

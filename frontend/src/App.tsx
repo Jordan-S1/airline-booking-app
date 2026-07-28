@@ -5,6 +5,7 @@ import { HomePage } from "./pages/HomePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { TripsPage } from "./pages/TripsPage";
 import { ExplorePage } from "./pages/ExplorePage";
+import { DestinationPage } from "./pages/DestinationPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { BookingConfirmationPage } from "./pages/BookingConfirmationPage";
 
@@ -16,6 +17,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/explore/:code" element={<DestinationPage />} />
           <Route
             path="/trips"
             element={

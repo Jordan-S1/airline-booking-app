@@ -115,7 +115,8 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 }
 
 interface BookingModalProps {
-  flight: FlightSearchResponseDto;
+  /** One flight for a one-way trip; one per leg for round trips and multi-city. */
+  flights: FlightSearchResponseDto[];
   passengerCount: number;
   seatClass: string;
   onClose: () => void;
@@ -124,7 +125,7 @@ interface BookingModalProps {
 type Step = "passengers" | "payment" | "confirmation";
 
 export function BookingModal({
-  flight,
+  flights,
   passengerCount,
   seatClass,
   onClose,
@@ -140,10 +141,13 @@ export function BookingModal({
     useState<PaymentMethod>("CREDIT_CARD");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmedBooking, setConfirmedBooking] =
-    useState<BookingResponseDto | null>(null);
+  const [confirmedBookings, setConfirmedBookings] = useState<
+    BookingResponseDto[]
+  >([]);
 
-  const totalAmount = flight.price * passengerCount;
+  const isMultiLeg = flights.length > 1;
+  const legTotal = flights.reduce((sum, f) => sum + f.price, 0);
+  const totalAmount = legTotal * passengerCount;
 
   const updatePassenger = (
     index: number,
@@ -155,25 +159,47 @@ export function BookingModal({
     );
   };
 
+  /**
+   * Books each leg in turn. The API models one booking per flight, so a
+   * multi-leg itinerary produces one reference per leg rather than a single
+   * PNR. If a later leg fails, earlier legs stay booked — the error names the
+   * leg so the user knows exactly where it stopped.
+   */
   const handleConfirmAndPay = async () => {
     if (!user) return;
     setIsSubmitting(true);
     setError(null);
 
+    const completed: BookingResponseDto[] = [];
+
     try {
-      const booking = await createBooking(user.userId, {
-        flightId: flight.id,
-        seatClass,
-        passengers,
-      });
-      await createPayment({ bookingId: booking.id, paymentMethod });
-      const confirmed = await confirmBooking(booking.bookingReference);
-      setConfirmedBooking(confirmed);
+      for (const flight of flights) {
+        const booking = await createBooking(user.userId, {
+          flightId: flight.id,
+          seatClass,
+          passengers,
+        });
+        await createPayment({ bookingId: booking.id, paymentMethod });
+        completed.push(await confirmBooking(booking.bookingReference));
+      }
+      setConfirmedBookings(completed);
       setStep("confirmation");
     } catch (err) {
-      setError(
-        extractErrorMessage(err, "Something went wrong with your booking."),
+      const failedLeg = completed.length + 1;
+      const base = extractErrorMessage(
+        err,
+        "Something went wrong with your booking.",
       );
+      setError(
+        isMultiLeg
+          ? `${base} (failed on leg ${failedLeg} of ${flights.length}${
+              completed.length > 0
+                ? `; legs 1-${completed.length} were booked`
+                : ""
+            })`
+          : base,
+      );
+      if (completed.length > 0) setConfirmedBookings(completed);
     } finally {
       setIsSubmitting(false);
     }
@@ -199,11 +225,17 @@ export function BookingModal({
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {step === "confirmation" ? "Booking confirmed" : "Book flight"}
+                {step === "confirmation"
+                  ? isMultiLeg
+                    ? "Itinerary confirmed"
+                    : "Booking confirmed"
+                  : isMultiLeg
+                    ? `Book itinerary · ${flights.length} legs`
+                    : "Book flight"}
               </h2>
               <p className="mt-0.5 font-mono text-sm text-zinc-500 dark:text-zinc-400">
-                {flight.flightNumber} · {flight.departureAirport} →{" "}
-                {flight.arrivalAirport}
+                {flights[0].departureAirport}
+                {flights.map((f) => ` → ${f.arrivalAirport}`).join("")}
               </p>
             </div>
             <button
@@ -310,10 +342,30 @@ export function BookingModal({
           {isAuthenticated && step === "payment" && (
             <div className="flex flex-col gap-5">
               <div className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
-                <div className="flex items-center justify-between text-sm">
+                {flights.map((flight, index) => (
+                  <div
+                    key={flight.id}
+                    className="flex items-center justify-between border-b border-zinc-100 py-2 text-sm first:pt-0 last:border-0 last:pb-0 dark:border-white/5"
+                  >
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      {isMultiLeg && (
+                        <span className="mr-1.5 font-medium text-zinc-400 dark:text-zinc-500">
+                          Leg {index + 1}
+                        </span>
+                      )}
+                      <span className="font-mono">
+                        {flight.departureAirport} → {flight.arrivalAirport}
+                      </span>{" "}
+                      · {passengerCount} × {formatPrice(flight.price)}
+                    </span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                      {formatPrice(flight.price * passengerCount)}
+                    </span>
+                  </div>
+                ))}
+                <div className="mt-3 flex items-center justify-between border-t border-zinc-200 pt-3 text-sm dark:border-white/10">
                   <span className="text-zinc-500 dark:text-zinc-400">
-                    {passengerCount} × {seatClass.toLowerCase()} ·{" "}
-                    {formatPrice(flight.price)}
+                    Total · {seatClass.toLowerCase()}
                   </span>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                     {formatPrice(totalAmount)}
@@ -373,27 +425,56 @@ export function BookingModal({
             </div>
           )}
 
-          {step === "confirmation" && confirmedBooking && (
+          {step === "confirmation" && confirmedBookings.length > 0 && (
             <div className="flex flex-col items-center gap-4 py-4 text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400">
                 <Check className="h-6 w-6" strokeWidth={2.2} />
               </span>
-              <div>
-                <p className="font-mono text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                  {confirmedBooking.bookingReference}
-                </p>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  Your booking is confirmed. A copy has been sent to{" "}
-                  {confirmedBooking.userEmail}.
+              <div className="w-full">
+                {confirmedBookings.length === 1 ? (
+                  <p className="font-mono text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    {confirmedBookings[0].bookingReference}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {confirmedBookings.map((booking, index) => (
+                      <div
+                        key={booking.id}
+                        className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-left dark:border-white/10"
+                      >
+                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                          Leg {index + 1} ·{" "}
+                          <span className="font-mono">
+                            {booking.departureAirport} → {booking.arrivalAirport}
+                          </span>
+                        </span>
+                        <span className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {booking.bookingReference}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                  {confirmedBookings.length === 1
+                    ? "Your booking is confirmed."
+                    : `All ${confirmedBookings.length} legs are confirmed — each leg has its own reference.`}{" "}
+                  A copy has been sent to {confirmedBookings[0].userEmail}.
                 </p>
               </div>
               <div className="flex w-full gap-3">
                 <Link
-                  to={`/booking/${confirmedBooking.bookingReference}`}
+                  to={
+                    confirmedBookings.length === 1
+                      ? `/booking/${confirmedBookings[0].bookingReference}`
+                      : "/trips"
+                  }
                   onClick={onClose}
                   className="flex-1 rounded-xl bg-zinc-900 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
                 >
-                  View booking
+                  {confirmedBookings.length === 1
+                    ? "View booking"
+                    : "View my trips"}
                 </Link>
                 <button
                   type="button"

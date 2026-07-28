@@ -15,3 +15,12 @@ export async function getAllAirports(): Promise<AirportResponseDto[]> {
   const { data } = await apiClient.get<AirportResponseDto[]>("/airports");
   return data;
 }
+
+export async function getAirportByCode(
+  code: string,
+): Promise<AirportResponseDto> {
+  const { data } = await apiClient.get<AirportResponseDto>(
+    `/airports/${code}`,
+  );
+  return data;
+}

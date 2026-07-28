@@ -17,6 +17,7 @@ import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -71,6 +72,18 @@ public class Airport {
      * Represents the time zone in which the airport operates.
      */
     private String timezone;
+
+    /**
+     * Latitude in decimal degrees (WGS 84). Used to plot route maps.
+     */
+    @Column(precision = 9, scale = 6)
+    private BigDecimal latitude;
+
+    /**
+     * Longitude in decimal degrees (WGS 84). Used to plot route maps.
+     */
+    @Column(precision = 9, scale = 6)
+    private BigDecimal longitude;
 
     /**
      * Timestamp indicating when the airport record was created.

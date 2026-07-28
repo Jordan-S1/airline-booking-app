@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
  *   InsufficientSeatsException     → 409 Conflict
  *   BookingException               → 400 Bad Request
  *   MethodArgumentNotValidException→ 400 Bad Request (+ per-field validation errors)
+ *   ExternalServiceException       → 503 Service Unavailable
  *   BadCredentialsException        → 401 Unauthorized
  *   AuthorizationDeniedException   → 403 Forbidden
  *   IllegalArgumentException       → 400 Bad Request
@@ -90,6 +91,13 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ErrorResponse> handleExternalService(
+            ExternalServiceException ex, HttpServletRequest request) {
+        log.warn("External service error: {}", ex.getMessage());
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

@@ -42,6 +42,9 @@ export interface CityWeather {
   temperatureCelsius: number;
   windSpeedKph: number;
   conditions: string;
+  /** Raw WMO interpretation code — drives which icon the widget shows. */
+  weatherCode: number;
+  isDay: boolean;
   observedAt: string;
 }
 
@@ -54,6 +57,7 @@ interface ForecastResult {
     temperature_2m: number;
     wind_speed_10m: number;
     weather_code: number;
+    is_day: number;
     time: string;
   };
 }
@@ -75,7 +79,7 @@ export async function getCityWeather(city: string): Promise<CityWeather> {
       params: {
         latitude: location.latitude,
         longitude: location.longitude,
-        current: "temperature_2m,wind_speed_10m,weather_code",
+        current: "temperature_2m,wind_speed_10m,weather_code,is_day",
       },
     },
   );
@@ -85,6 +89,8 @@ export async function getCityWeather(city: string): Promise<CityWeather> {
     temperatureCelsius: Math.round(forecast.current.temperature_2m),
     windSpeedKph: Math.round(forecast.current.wind_speed_10m),
     conditions: WEATHER_CODE_LABELS[forecast.current.weather_code] ?? "Unknown",
+    weatherCode: forecast.current.weather_code,
+    isDay: forecast.current.is_day === 1,
     observedAt: forecast.current.time,
   };
 }

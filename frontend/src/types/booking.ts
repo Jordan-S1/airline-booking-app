@@ -27,6 +27,7 @@ export interface BookingRequestDto {
 export interface BookingResponseDto {
   id: number;
   bookingReference: string;
+  flightId: number;
   flightNumber: string;
   departureAirport: string;
   arrivalAirport: string;

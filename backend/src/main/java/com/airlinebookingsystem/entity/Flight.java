@@ -125,6 +125,18 @@ public class Flight {
     private String aircraft;
 
     /**
+     * Departure gate at the origin airport (e.g. "A14").
+     */
+    @Column(length = 10)
+    private String gate;
+
+    /**
+     * Departure terminal at the origin airport (e.g. "5").
+     */
+    @Column(length = 10)
+    private String terminal;
+
+    /**
      * All bookings associated with this flight.
      */
     @OneToMany(mappedBy = "flight", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

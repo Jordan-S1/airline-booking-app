@@ -38,6 +38,8 @@ import java.util.List;
  *   GET  /api/v1/flights/**     — browse flights
  *   GET  /api/v1/airports/**    — airport data
  *   GET  /api/v1/airlines/**    — airline data
+ *   GET  /api/v1/currencies/**  — supported display currencies
+ *   GET  /api/v1/live-flights/**— live ADS-B traffic (OpenSky proxy)
  *   GET  /actuator/health       — health check
  *   GET  /swagger-ui/**         — API docs
  * Everything else requires a valid Bearer token.
@@ -71,9 +73,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/flights/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/flights/search").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/flights/search/multi-city").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/airports/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/airlines/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/currencies/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/live-flights/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
