@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Check } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
+import { SelectField } from "../components/SelectField";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
 import { getUser, updateUser } from "../api/users";
@@ -164,27 +165,25 @@ export function ProfilePage() {
               value={form.postalCode ?? ""}
               onChange={(v) => set("postalCode", v)}
             />
-            <label className="flex flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                Display currency
-              </span>
-              <select
-                value={form.preferredCurrency}
-                onChange={(e) => set("preferredCurrency", e.target.value)}
-                className="w-full cursor-pointer appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
-              >
-                {currencies.length === 0 && (
-                  <option value={form.preferredCurrency}>
-                    {form.preferredCurrency}
-                  </option>
-                )}
-                {currencies.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} — {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Display currency"
+              value={form.preferredCurrency}
+              options={
+                currencies.length > 0
+                  ? currencies.map((c) => ({
+                      value: c.code,
+                      label: `${c.code} - ${c.name}`,
+                      hint: c.symbol,
+                    }))
+                  : [
+                      {
+                        value: form.preferredCurrency,
+                        label: form.preferredCurrency,
+                      },
+                    ]
+              }
+              onChange={(code) => set("preferredCurrency", code)}
+            />
           </div>
 
           {error && (

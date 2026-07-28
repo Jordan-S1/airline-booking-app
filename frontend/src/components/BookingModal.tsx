@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
 import { createBooking, confirmBooking } from "../api/bookings";
 import { createPayment } from "../api/payments";
 import { AuthModal } from "./AuthModal";
+import { SelectField, type SelectOption } from "./SelectField";
 import type { FlightSearchResponseDto } from "../types/flight";
 import type {
   BookingResponseDto,
@@ -16,7 +17,7 @@ import type {
   PaymentMethod,
 } from "../types/booking";
 
-const GENDERS: { value: Gender; label: string }[] = [
+const GENDERS: SelectOption<Gender>[] = [
   { value: "MALE", label: "Male" },
   { value: "FEMALE", label: "Female" },
   { value: "OTHER", label: "Other" },
@@ -28,73 +29,6 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "PAYPAL", label: "PayPal" },
   { value: "BANK_TRANSFER", label: "Bank transfer" },
 ];
-
-function GenderField({
-  value,
-  onChange,
-}: {
-  value: Gender;
-  onChange: (gender: Gender) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedLabel = GENDERS.find((g) => g.value === value)?.label ?? "";
-
-  return (
-    <div className="relative">
-      <label className="flex flex-col gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-          Gender
-        </span>
-        <button
-          type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-          className="flex w-full cursor-pointer items-center justify-between text-sm font-medium text-zinc-900 dark:text-zinc-100"
-        >
-          {selectedLabel}
-          <ChevronDown
-            strokeWidth={1.8}
-            className={`h-3.5 w-3.5 text-zinc-400 transition-transform dark:text-zinc-500 ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-      </label>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.ul
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-0 right-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-obsidian-raised"
-          >
-            {GENDERS.map((g) => (
-              <li key={g.value}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onChange(g.value);
-                    setIsOpen(false);
-                  }}
-                  className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                    g.value === value
-                      ? "bg-accent/10 font-medium text-accent"
-                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5"
-                  }`}
-                >
-                  {g.label}
-                </button>
-              </li>
-            ))}
-          </motion.ul>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function emptyPassenger(): PassengerRequestDto {
   return {
@@ -303,8 +237,10 @@ export function BookingModal({
                         className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
                       />
                     </label>
-                    <GenderField
+                    <SelectField
+                      label="Gender"
                       value={passenger.gender}
+                      options={GENDERS}
                       onChange={(gender) =>
                         updatePassenger(index, "gender", gender)
                       }

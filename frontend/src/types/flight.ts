@@ -86,6 +86,8 @@ export interface AirportResponseDto {
   name: string;
   city: string;
   country: string;
+  /** ISO 3166-1 alpha-2, used to pick the flag. Null for airports seeded without one. */
+  countryCode: string | null;
   timezone: string;
   latitude: number | null;
   longitude: number | null;

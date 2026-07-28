@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeftRight, ArrowRight, ChevronDown, Plus, X } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Plus, X } from "lucide-react";
 import { AirportAutocomplete } from "./AirportAutocomplete";
+import { SelectField, type SelectOption } from "./SelectField";
 import type {
   FlightSearchRequestDto,
   MultiCityLegRequestDto,
@@ -16,11 +17,16 @@ const TRIP_TYPES: { value: TripType; label: string }[] = [
   { value: "MULTI_CITY", label: "Multi-city" },
 ];
 
-const SEAT_CLASSES: { value: SeatClass; label: string }[] = [
+const SEAT_CLASSES: SelectOption<SeatClass>[] = [
   { value: "ECONOMY", label: "Economy" },
   { value: "BUSINESS", label: "Business" },
   { value: "FIRST", label: "First" },
 ];
+
+const PASSENGER_OPTIONS: SelectOption<number>[] = [1, 2, 3, 4, 5, 6].map((n) => ({
+  value: n,
+  label: `${n} ${n === 1 ? "passenger" : "passengers"}`,
+}));
 
 const POPULAR_ROUTES: { departureAirport: string; arrivalAirport: string }[] = [
   { departureAirport: "DUB", arrivalAirport: "LHR" },
@@ -32,15 +38,6 @@ const POPULAR_ROUTES: { departureAirport: string; arrivalAirport: string }[] = [
 const MAX_LEGS = 5;
 const DEFAULT_DATE = "2026-08-01";
 
-function SelectChevron() {
-  return (
-    <ChevronDown
-      strokeWidth={1.8}
-      className="pointer-events-none absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
-    />
-  );
-}
-
 function FieldShell({
   label,
   children,
@@ -49,7 +46,7 @@ function FieldShell({
   children: React.ReactNode;
 }) {
   return (
-    <label className="group flex flex-1 flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
+    <label className="group flex min-w-0 flex-1 flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
       <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
         {label}
       </span>
@@ -282,7 +279,14 @@ export function FlightSearchPanel({
                   />
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row">
+                {/* Grid, not flex: date inputs have a wide intrinsic width, so
+                    flex-1 columns would size to content instead of splitting
+                    evenly and would not line up with the row above. */}
+                <div
+                  className={`grid gap-3 ${
+                    isRoundTrip ? "sm:grid-cols-2" : "grid-cols-1"
+                  }`}
+                >
                   <FieldShell label="Departure">
                     <input
                       type="date"
@@ -293,7 +297,7 @@ export function FlightSearchPanel({
                           departureDate: e.target.value,
                         }))
                       }
-                      className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
+                      className="w-full min-w-0 bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
                     />
                   </FieldShell>
 
@@ -309,7 +313,7 @@ export function FlightSearchPanel({
                             returnDate: e.target.value || null,
                           }))
                         }
-                        className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
+                        className="w-full min-w-0 bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
                       />
                     </FieldShell>
                   )}
@@ -318,50 +322,24 @@ export function FlightSearchPanel({
             )}
           </AnimatePresence>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <FieldShell label="Passengers">
-              <div className="relative pr-5">
-                <select
-                  value={request.passengers}
-                  onChange={(e) =>
-                    setRequest((p) => ({
-                      ...p,
-                      passengers: Number(e.target.value),
-                    }))
-                  }
-                  className="w-full cursor-pointer appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
-                >
-                  {[1, 2, 3, 4, 5, 6].map((n) => (
-                    <option key={n} value={n}>
-                      {n} {n === 1 ? "passenger" : "passengers"}
-                    </option>
-                  ))}
-                </select>
-                <SelectChevron />
-              </div>
-            </FieldShell>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              label="Passengers"
+              value={request.passengers}
+              options={PASSENGER_OPTIONS}
+              onChange={(passengers) =>
+                setRequest((p) => ({ ...p, passengers }))
+              }
+            />
 
-            <FieldShell label="Cabin">
-              <div className="relative pr-5">
-                <select
-                  value={request.seatClass}
-                  onChange={(e) =>
-                    setRequest((p) => ({
-                      ...p,
-                      seatClass: e.target.value as SeatClass,
-                    }))
-                  }
-                  className="w-full cursor-pointer appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100 [&>option]:text-zinc-900"
-                >
-                  {SEAT_CLASSES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <SelectChevron />
-              </div>
-            </FieldShell>
+            <SelectField
+              label="Cabin"
+              value={request.seatClass}
+              options={SEAT_CLASSES}
+              onChange={(seatClass) =>
+                setRequest((p) => ({ ...p, seatClass }))
+              }
+            />
           </div>
 
           {!isMultiCity && (

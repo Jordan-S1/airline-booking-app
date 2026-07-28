@@ -24,5 +24,8 @@ public record AirportRequest(
         @NotBlank(message = "Country is required")
         String country,
 
+        @Pattern(regexp = "^[A-Za-z]{2}$", message = "Country code must be 2 letters (ISO 3166-1 alpha-2)")
+        String countryCode,
+
         String timezone
 ) {}

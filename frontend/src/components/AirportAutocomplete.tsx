@@ -53,7 +53,7 @@ export function AirportAutocomplete({
   };
 
   return (
-    <div className="relative flex-1">
+    <div className="relative min-w-0 flex-1">
       <label className="group flex flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
         <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
           {label}
@@ -70,7 +70,7 @@ export function AirportAutocomplete({
           onBlur={() => setTimeout(() => setIsOpen(false), 150)}
           maxLength={20}
           placeholder={placeholder}
-          className="w-full bg-transparent font-mono text-xl font-semibold tracking-tight text-zinc-900 outline-none placeholder:text-zinc-300 dark:text-zinc-100 dark:placeholder:text-zinc-700"
+          className="w-full min-w-0 bg-transparent font-mono text-xl font-semibold tracking-tight text-zinc-900 outline-none placeholder:text-zinc-300 dark:text-zinc-100 dark:placeholder:text-zinc-700"
         />
       </label>
 

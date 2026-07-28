@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import { ArrowLeft, MapPin } from "lucide-react";
+import { CountryFlag } from "../components/CountryFlag";
 import { PageHeader } from "../components/PageHeader";
 import { WeatherWidget } from "../components/WeatherWidget";
 import {
@@ -92,8 +94,8 @@ export function DestinationPage() {
           />
 
           <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:col-span-2">
-              <div className="flex items-start justify-between">
+            <div className="flex gap-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:col-span-2">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <div>
                   <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                     Destination
@@ -105,18 +107,35 @@ export function DestinationPage() {
                     {airport.country} · {airport.timezone}
                   </p>
                 </div>
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-900 dark:bg-white/5 dark:text-accent">
-                  <MapPin className="h-5 w-5" strokeWidth={1.8} />
-                </span>
+                {/* mt-auto pins the stat to the bottom so the card fills its height */}
+                <div className="mt-auto flex items-baseline gap-2 pt-6">
+                  <p className="font-mono text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    {flights.length}
+                  </p>
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    upcoming {flights.length === 1 ? "flight" : "flights"}{" "}
+                    arriving
+                  </span>
+                </div>
               </div>
-              <div className="mt-6 flex items-baseline gap-2">
-                <p className="font-mono text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  {flights.length}
-                </p>
-                <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                  upcoming {flights.length === 1 ? "flight" : "flights"} arriving
+
+              <motion.div
+                key={airport.country}
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 240, damping: 22 }}
+                className="hidden shrink-0 flex-col items-center justify-center gap-2 sm:flex"
+              >
+                <CountryFlag
+                  countryCode={airport.countryCode}
+                  country={airport.country}
+                  className="h-24 w-auto rounded-lg border border-zinc-200 shadow-sm dark:border-white/10 dark:shadow-none"
+                />
+                <span className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  <MapPin className="h-3 w-3" strokeWidth={2} />
+                  {airport.code}
                 </span>
-              </div>
+              </motion.div>
             </div>
 
             <WeatherWidget airportCode={airport.code} city={airport.city} />

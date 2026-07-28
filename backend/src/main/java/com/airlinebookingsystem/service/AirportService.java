@@ -61,6 +61,7 @@ public class AirportService {
                 .name(request.name())
                 .city(request.city())
                 .country(request.country())
+                .countryCode(normaliseCountryCode(request.countryCode()))
                 .timezone(request.timezone())
                 .build();
 
@@ -77,6 +78,7 @@ public class AirportService {
         airport.setName(request.name());
         airport.setCity(request.city());
         airport.setCountry(request.country());
+        if (request.countryCode() != null) airport.setCountryCode(normaliseCountryCode(request.countryCode()));
         if (request.timezone() != null) airport.setTimezone(request.timezone());
 
         log.info("Updated airport: {}", airport.getCode());
@@ -90,6 +92,14 @@ public class AirportService {
         airportRepository.deleteById(id);
     }
 
+    /**
+     * The country_code column is constrained to uppercase alpha-2, so normalise
+     * here rather than rejecting a lowercase code the client meant correctly.
+     */
+    private String normaliseCountryCode(String countryCode) {
+        return countryCode == null ? null : countryCode.toUpperCase();
+    }
+
     private AirportResponse mapToResponse(Airport airport) {
         return new AirportResponse(
                 airport.getId(),
@@ -97,6 +107,7 @@ public class AirportService {
                 airport.getName(),
                 airport.getCity(),
                 airport.getCountry(),
+                airport.getCountryCode(),
                 airport.getTimezone(),
                 airport.getLatitude(),
                 airport.getLongitude(),

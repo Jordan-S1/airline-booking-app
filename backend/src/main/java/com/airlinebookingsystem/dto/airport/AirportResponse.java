@@ -14,6 +14,7 @@ public record AirportResponse(
         String name,
         String city,
         String country,
+        String countryCode,
         String timezone,
         BigDecimal latitude,
         BigDecimal longitude,

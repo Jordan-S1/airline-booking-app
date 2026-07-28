@@ -68,6 +68,14 @@ public class Airport {
     private String country;
 
     /**
+     * ISO 3166-1 alpha-2 code for {@link #country} (e.g. "IE" for Ireland).
+     * Stored alongside the country name because flag icon sets key on the code,
+     * not the name. Nullable — the UI falls back to a neutral marker.
+     */
+    @Column(name = "country_code", length = 2)
+    private String countryCode;
+
+    /**
      * Timezone identifier for the airport's location.
      * Represents the time zone in which the airport operates.
      */

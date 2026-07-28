@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Cloud,
   CloudDrizzle,
   CloudFog,
   CloudLightning,
+  CloudOff,
   CloudRain,
   CloudSnow,
   CloudSun,
@@ -63,28 +65,51 @@ export function WeatherWidget({
     };
   }, [city]);
 
-  const Icon = weather ? weatherIcon(weather.weatherCode, weather.isDay) : Sun;
+  const Icon =
+    status === "error"
+      ? CloudOff
+      : weather
+        ? weatherIcon(weather.weatherCode, weather.isDay)
+        : Cloud;
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none">
-      <div className="flex items-start justify-between">
-        <div>
-          <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-            Arrival weather
-          </span>
-          <p className="mt-1 font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {airportCode}
-          </p>
-        </div>
-        <Icon
-          className={`h-6 w-6 ${
-            status === "success" ? "text-accent" : "text-zinc-300 dark:text-zinc-600"
-          }`}
-          strokeWidth={1.8}
-        />
+    <div className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none">
+      <div>
+        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          Arrival weather
+        </span>
+        <p className="mt-1 font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          {airportCode}
+        </p>
       </div>
 
-      <div className="mt-6">
+      {/* Fills the gap the card's fixed height leaves between header and readout. */}
+      <div className="flex flex-1 items-center justify-center py-4">
+        <motion.div
+          key={status === "success" ? `icon-${weather?.weatherCode}` : status}
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          className="relative"
+        >
+          {status === "success" && (
+            <span
+              aria-hidden
+              className="absolute inset-0 rounded-full bg-accent/15 blur-3xl dark:bg-accent/20"
+            />
+          )}
+          <Icon
+            className={`relative h-28 w-28 ${
+              status === "success"
+                ? "text-accent"
+                : "text-zinc-200 dark:text-zinc-700"
+            } ${status === "loading" ? "animate-pulse" : ""}`}
+            strokeWidth={1}
+          />
+        </motion.div>
+      </div>
+
+      <div>
         {status === "loading" && (
           <div className="flex items-center gap-2 text-sm text-zinc-400 dark:text-zinc-500">
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-accent dark:border-white/20" />
