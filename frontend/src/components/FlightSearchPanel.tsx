@@ -370,13 +370,16 @@ export function FlightSearchPanel({
         </div>
       </div>
 
+      {/* data-search-submit: the dashboard scrolls to this when the panel is
+          taller than the viewport. scroll-mb-6 keeps it off the bottom edge. */}
       <motion.button
         type="button"
+        data-search-submit
         onClick={() => onSearch({ tripType, simple: request, legs })}
         disabled={isSearching}
         whileHover={{ scale: isSearching ? 1 : 1.01 }}
         whileTap={{ scale: isSearching ? 1 : 0.98 }}
-        className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className="mt-6 flex w-full scroll-mb-6 cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
         {isSearching ? (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-zinc-900/30 dark:border-t-zinc-900" />

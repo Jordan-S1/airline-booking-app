@@ -2,7 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, X } from "lucide-react";
+import {
+  Check,
+  CreditCard,
+  Landmark,
+  WalletCards,
+  X,
+} from "lucide-react";
+import { FaPaypal } from "react-icons/fa6";
+import type { ComponentType } from "react";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
 import { createBooking, confirmBooking } from "../api/bookings";
@@ -23,12 +31,41 @@ const GENDERS: SelectOption<Gender>[] = [
   { value: "OTHER", label: "Other" },
 ];
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: "CREDIT_CARD", label: "Credit card" },
-  { value: "DEBIT_CARD", label: "Debit card" },
-  { value: "PAYPAL", label: "PayPal" },
-  { value: "BANK_TRANSFER", label: "Bank transfer" },
+/**
+ * Accepts both Lucide and react-icons components — they share the props used
+ * here. Lucide has no brand marks, so PayPal's logo comes from Font Awesome;
+ * `strokeWidth` is simply ignored by that one since it's a solid glyph.
+ */
+type PaymentIcon = ComponentType<{ className?: string; strokeWidth?: number }>;
+
+/**
+ * The two card methods use different card glyphs rather than one repeated icon,
+ * so the selected method stays distinguishable at a glance.
+ */
+const PAYMENT_METHODS: {
+  value: PaymentMethod;
+  label: string;
+  icon: PaymentIcon;
+}[] = [
+  { value: "CREDIT_CARD", label: "Credit card", icon: CreditCard },
+  { value: "DEBIT_CARD", label: "Debit card", icon: WalletCards },
+  { value: "PAYPAL", label: "PayPal", icon: FaPaypal },
+  { value: "BANK_TRANSFER", label: "Bank transfer", icon: Landmark },
 ];
+
+/** Gender is a select that always holds a value, so it can't be blank. */
+const REQUIRED_PASSENGER_FIELDS = [
+  "firstName",
+  "lastName",
+  "dateOfBirth",
+  "passportNumber",
+  "nationality",
+] as const satisfies readonly (keyof PassengerRequestDto)[];
+
+/** Identifies one field of one passenger, e.g. "0.lastName". */
+function fieldKey(index: number, field: keyof PassengerRequestDto): string {
+  return `${index}.${field}`;
+}
 
 function emptyPassenger(): PassengerRequestDto {
   return {
@@ -75,6 +112,10 @@ export function BookingModal({
     useState<PaymentMethod>("CREDIT_CARD");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Keys of passenger fields that failed validation, as `${index}.${field}`. */
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [confirmedBookings, setConfirmedBookings] = useState<
     BookingResponseDto[]
   >([]);
@@ -91,7 +132,57 @@ export function BookingModal({
     setPassengers((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)),
     );
+
+    // Clear this field's error as soon as it's edited, rather than making the
+    // user press Continue again to find out whether they've fixed it.
+    setInvalidFields((prev) => {
+      const key = fieldKey(index, field);
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
   };
+
+  /**
+   * Validates on leaving the passenger step rather than at payment: the backend
+   * would reject a blank name anyway, but only after the user had moved past the
+   * screen holding the mistake.
+   */
+  const handleContinueToPayment = () => {
+    const invalid = new Set<string>();
+    const today = new Date().toISOString().slice(0, 10);
+
+    passengers.forEach((passenger, index) => {
+      REQUIRED_PASSENGER_FIELDS.forEach((field) => {
+        if (!passenger[field].trim()) invalid.add(fieldKey(index, field));
+      });
+      // A date of birth in the future is always a typo.
+      if (passenger.dateOfBirth && passenger.dateOfBirth > today) {
+        invalid.add(fieldKey(index, "dateOfBirth"));
+      }
+    });
+
+    setInvalidFields(invalid);
+
+    if (invalid.size > 0) {
+      setError(
+        passengers.length > 1
+          ? "Complete the highlighted details for every passenger."
+          : "Complete the highlighted details to continue.",
+      );
+      return;
+    }
+
+    setError(null);
+    setStep("payment");
+  };
+
+  /** Red border while a field is flagged, normal styling once it's fixed. */
+  const fieldBorder = (index: number, field: keyof PassengerRequestDto) =>
+    invalidFields.has(fieldKey(index, field))
+      ? "border-red-400 focus-within:border-red-500 focus:border-red-500 dark:border-red-400/60"
+      : "border-zinc-200 focus-within:border-zinc-400 focus:border-zinc-400 dark:border-white/10 dark:focus-within:border-white/30";
 
   /**
    * Books each leg in turn. The API models one booking per flight, so a
@@ -176,7 +267,7 @@ export function BookingModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -214,7 +305,10 @@ export function BookingModal({
                         updatePassenger(index, "firstName", e.target.value)
                       }
                       placeholder="First name"
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      aria-invalid={invalidFields.has(
+                        fieldKey(index, "firstName"),
+                      )}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "firstName")}`}
                     />
                     <input
                       value={passenger.lastName}
@@ -222,18 +316,27 @@ export function BookingModal({
                         updatePassenger(index, "lastName", e.target.value)
                       }
                       placeholder="Last name"
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      aria-invalid={invalidFields.has(
+                        fieldKey(index, "lastName"),
+                      )}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "lastName")}`}
                     />
-                    <label className="flex flex-col gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
+                    <label
+                      className={`flex flex-col gap-1 rounded-lg border bg-white px-3 py-2 transition-colors dark:bg-white/[0.03] ${fieldBorder(index, "dateOfBirth")}`}
+                    >
                       <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                         Date of birth
                       </span>
                       <input
                         type="date"
                         value={passenger.dateOfBirth}
+                        max={new Date().toISOString().slice(0, 10)}
                         onChange={(e) =>
                           updatePassenger(index, "dateOfBirth", e.target.value)
                         }
+                        aria-invalid={invalidFields.has(
+                          fieldKey(index, "dateOfBirth"),
+                        )}
                         className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none [color-scheme:light] dark:text-zinc-100 dark:[color-scheme:dark]"
                       />
                     </label>
@@ -251,7 +354,10 @@ export function BookingModal({
                         updatePassenger(index, "passportNumber", e.target.value)
                       }
                       placeholder="Passport number"
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      aria-invalid={invalidFields.has(
+                        fieldKey(index, "passportNumber"),
+                      )}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "passportNumber")}`}
                     />
                     <input
                       value={passenger.nationality}
@@ -259,16 +365,28 @@ export function BookingModal({
                         updatePassenger(index, "nationality", e.target.value)
                       }
                       placeholder="Nationality"
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-100"
+                      aria-invalid={invalidFields.has(
+                        fieldKey(index, "nationality"),
+                      )}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "nationality")}`}
                     />
                   </div>
                 </div>
               ))}
 
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-400"
+                >
+                  {error}
+                </p>
+              )}
+
               <button
                 type="button"
-                onClick={() => setStep("payment")}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                onClick={handleContinueToPayment}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 cursor-pointer"
               >
                 Continue to payment
               </button>
@@ -300,7 +418,7 @@ export function BookingModal({
                   </div>
                 ))}
                 <div className="mt-3 flex items-center justify-between border-t border-zinc-200 pt-3 text-sm dark:border-white/10">
-                  <span className="text-zinc-500 dark:text-zinc-400">
+                  <span className="capitalize text-zinc-500 dark:text-zinc-400">
                     Total · {seatClass.toLowerCase()}
                   </span>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
@@ -314,20 +432,34 @@ export function BookingModal({
                   Payment method
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_METHODS.map((method) => (
-                    <button
-                      key={method.value}
-                      type="button"
-                      onClick={() => setPaymentMethod(method.value)}
-                      className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                        paymentMethod === method.value
-                          ? "border-accent/40 bg-accent/10 text-accent"
-                          : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-white/10 dark:text-zinc-400 dark:hover:border-white/20"
-                      }`}
-                    >
-                      {method.label}
-                    </button>
-                  ))}
+                  {PAYMENT_METHODS.map((method) => {
+                    const Icon = method.icon;
+                    const isSelected = paymentMethod === method.value;
+
+                    return (
+                      <button
+                        key={method.value}
+                        type="button"
+                        onClick={() => setPaymentMethod(method.value)}
+                        aria-pressed={isSelected}
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium cursor-pointer transition-colors ${
+                          isSelected
+                            ? "border-accent/40 bg-accent/10 text-accent"
+                            : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-white/10 dark:text-zinc-400 dark:hover:border-white/20"
+                        }`}
+                      >
+                        <Icon
+                          className={`h-4 w-4 shrink-0 ${
+                            isSelected
+                              ? ""
+                              : "text-zinc-400 dark:text-zinc-500"
+                          }`}
+                          strokeWidth={1.8}
+                        />
+                        {method.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -341,7 +473,7 @@ export function BookingModal({
                 <button
                   type="button"
                   onClick={() => setStep("passengers")}
-                  className="rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5"
+                  className="rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5 cursor-pointer"
                 >
                   Back
                 </button>
@@ -349,7 +481,7 @@ export function BookingModal({
                   type="button"
                   onClick={handleConfirmAndPay}
                   disabled={isSubmitting}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-zinc-900/30 dark:border-t-zinc-900" />
@@ -381,7 +513,8 @@ export function BookingModal({
                         <span className="text-xs text-zinc-400 dark:text-zinc-500">
                           Leg {index + 1} ·{" "}
                           <span className="font-mono">
-                            {booking.departureAirport} → {booking.arrivalAirport}
+                            {booking.departureAirport} →{" "}
+                            {booking.arrivalAirport}
                           </span>
                         </span>
                         <span className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -391,11 +524,16 @@ export function BookingModal({
                     ))}
                   </div>
                 )}
+                {/* No confirmation email is sent — there's no mail service on
+                    the backend — so this points at Trips instead of claiming
+                    one was. Revisit if an EmailService is ever added. */}
                 <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
                   {confirmedBookings.length === 1
                     ? "Your booking is confirmed."
                     : `All ${confirmedBookings.length} legs are confirmed — each leg has its own reference.`}{" "}
-                  A copy has been sent to {confirmedBookings[0].userEmail}.
+                  {confirmedBookings.length === 1
+                    ? "Find it any time under Trips."
+                    : "Find them any time under Trips."}
                 </p>
               </div>
               <div className="flex w-full gap-3">

@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Plane } from "lucide-react";
 import { RouteMap } from "./RouteMap";
@@ -73,12 +72,18 @@ interface FlightStatusWidgetProps {
   status: "loading" | "error" | "empty" | "ready";
   flight: FlightStatusDto | null;
   isAuthenticated: boolean;
+  /** Empty-state CTA when signed in — the page decides where the search lives. */
+  onFindFlights: () => void;
+  /** Empty-state CTA when signed out; there's nothing to track until you log in. */
+  onSignIn: () => void;
 }
 
 export function FlightStatusWidget({
   status,
   flight,
   isAuthenticated,
+  onFindFlights,
+  onSignIn,
 }: FlightStatusWidgetProps) {
   if (status === "loading") {
     return (
@@ -118,13 +123,19 @@ export function FlightStatusWidget({
                 : "Sign in to track the status of your booked flights."}
             </p>
           </div>
-          <Link
-            to="/dashboard"
-            className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-accent"
+          {/* The CTA has to match the copy above it: signing in is the blocker
+              when signed out, searching is the next step once you are. */}
+          <button
+            type="button"
+            onClick={isAuthenticated ? onFindFlights : onSignIn}
+            className="group mt-1 inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-accent transition-opacity hover:opacity-80"
           >
-            Search flights
-            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
-          </Link>
+            {isAuthenticated ? "Search flights" : "Sign in"}
+            <ArrowRight
+              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+              strokeWidth={2}
+            />
+          </button>
         </div>
       </Shell>
     );

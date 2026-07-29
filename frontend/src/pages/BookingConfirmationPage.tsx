@@ -68,9 +68,13 @@ export function BookingConfirmationPage() {
           className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none"
         >
           <div className="relative flex flex-col items-center border-b border-zinc-100 px-6 py-10 text-center dark:border-white/5">
+            {/* inset-0 rather than a fixed h-32: the glow has to reach the
+                divider below, and the header's height varies with content.
+                Sizing the ellipse to the box (100% 100%) makes the fade finish
+                exactly at the border instead of stopping short of it. */}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.16),transparent_70%)]"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_0%,rgba(6,182,212,0.16),transparent_100%)]"
             />
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400">
               <Check className="h-6 w-6" strokeWidth={2.2} />

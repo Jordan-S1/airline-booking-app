@@ -49,4 +49,22 @@
       background-color 0.3s ease,
       color 0.3s ease;
   }
+
+  /* The calendar button of a date input lives in the browser's shadow DOM, so
+     no utility class can reach it — it needs an explicit pseudo-element rule.
+     By default it keeps the arrow cursor and so doesn't read as clickable. */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+  }
+
+  input[type="date"]:hover::-webkit-calendar-picker-indicator,
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* No dark-mode colour rule needed here: ThemeProvider sets `color-scheme` on
+     <html>, so the browser already paints this glyph white in dark mode (and
+     themes the picker popup to match). Filtering it would invert that back. */
 }

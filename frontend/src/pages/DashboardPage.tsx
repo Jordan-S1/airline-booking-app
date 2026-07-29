@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { FlightSearchPanel } from "../components/FlightSearchPanel";
@@ -10,6 +10,7 @@ import {
   type ResultSection,
 } from "../components/FlightResultsList";
 import { BookingModal } from "../components/BookingModal";
+import { AuthModal } from "../components/AuthModal";
 import type { SearchSubmission } from "../components/FlightSearchPanel";
 import {
   searchFlights,
@@ -55,6 +56,8 @@ function greeting() {
 export function DashboardPage() {
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [searchStatus, setSearchStatus] = useState<SearchStatus>("idle");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchLegs, setSearchLegs] = useState<SearchLeg[]>([]);
@@ -137,6 +140,32 @@ export function DashboardPage() {
       cancelled = true;
     };
   }, [user]);
+
+  /**
+   * The search panel already lives on this page, so the empty-state CTA scrolls
+   * to it rather than navigating. On mobile the panel sits above the fold of the
+   * status widget, so this is a real jump; on desktop it just draws the eye.
+   */
+  const focusSearchPanel = useCallback(() => {
+    const panel = searchPanelRef.current;
+    if (!panel) return;
+    // Multi-city grows the panel past the viewport once it has a few legs, and
+    // centring something taller than the screen pushes its submit button out of
+    // sight. In that case scroll to the button itself with "nearest", which
+    // moves the minimum distance needed to reveal it rather than running the
+    // page all the way down.
+    const fitsOnScreen =
+      panel.getBoundingClientRect().height <= window.innerHeight;
+    const submit = panel.querySelector<HTMLElement>("[data-search-submit]");
+
+    if (fitsOnScreen || !submit) {
+      panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      submit.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    panel.focus({ preventScroll: true });
+  }, []);
 
   const handleSearch = async ({ tripType, simple, legs }: SearchSubmission) => {
     setSearchStatus("loading");
@@ -280,10 +309,14 @@ export function DashboardPage() {
           }}
           className="lg:col-span-1 lg:row-span-2"
         >
-          <FlightSearchPanel
-            onSearch={handleSearch}
-            isSearching={searchStatus === "loading"}
-          />
+          {/* tabIndex allows focusSearchPanel to move keyboard focus here, not
+              just scroll — scrolling alone leaves focus stranded further down. */}
+          <div ref={searchPanelRef} tabIndex={-1} className="outline-none">
+            <FlightSearchPanel
+              onSearch={handleSearch}
+              isSearching={searchStatus === "loading"}
+            />
+          </div>
         </motion.div>
 
         <motion.div
@@ -297,6 +330,8 @@ export function DashboardPage() {
             status={trackedStatus}
             flight={trackedFlight}
             isAuthenticated={user !== null}
+            onFindFlights={focusSearchPanel}
+            onSignIn={() => setIsAuthModalOpen(true)}
           />
         </motion.div>
 
@@ -370,6 +405,10 @@ export function DashboardPage() {
           seatClass={searchSeatClass}
           onClose={() => setBookingFlights(null)}
         />
+      )}
+
+      {isAuthModalOpen && (
+        <AuthModal onClose={() => setIsAuthModalOpen(false)} />
       )}
     </main>
   );
