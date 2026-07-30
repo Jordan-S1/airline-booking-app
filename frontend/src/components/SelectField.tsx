@@ -37,10 +37,12 @@ export function SelectField<T extends string | number>({
   const selectedIndex = options.findIndex((option) => option.value === value);
   const selectedLabel = selectedIndex >= 0 ? options[selectedIndex].label : "";
 
-  // Highlight the current selection whenever the list opens.
-  useEffect(() => {
-    if (isOpen) setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [isOpen, selectedIndex]);
+  // Highlight the current selection as the list opens, so the two always move
+  // together and opening never renders a frame with a stale highlight.
+  const openList = () => {
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    setIsOpen(true);
+  };
 
   // Close when focus or a click lands outside the component.
   useEffect(() => {
@@ -66,7 +68,7 @@ export function SelectField<T extends string | number>({
       case "ArrowDown":
         event.preventDefault();
         if (!isOpen) {
-          setIsOpen(true);
+          openList();
         } else {
           setActiveIndex((i) => Math.min(i + 1, options.length - 1));
         }
@@ -91,7 +93,7 @@ export function SelectField<T extends string | number>({
       case " ":
         event.preventDefault();
         if (isOpen) commit(activeIndex);
-        else setIsOpen(true);
+        else openList();
         break;
       case "Escape":
         setIsOpen(false);
@@ -110,7 +112,7 @@ export function SelectField<T extends string | number>({
         </span>
         <button
           type="button"
-          onClick={() => setIsOpen((open) => !open)}
+          onClick={() => (isOpen ? setIsOpen(false) : openList())}
           onKeyDown={handleKeyDown}
           aria-haspopup="listbox"
           aria-expanded={isOpen}

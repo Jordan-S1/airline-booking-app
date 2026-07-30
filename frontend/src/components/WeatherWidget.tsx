@@ -17,22 +17,48 @@ import { getCityWeather, type CityWeather } from "../api/weather";
 
 type Status = "loading" | "error" | "success";
 
+/** A settled fetch, tagged with the city it was made for. `null` means it failed. */
+interface WeatherResult {
+  city: string;
+  weather: CityWeather | null;
+}
+
 /**
- * Picks an icon for a WMO interpretation code. Clear/partly-cloudy states swap
- * to a night variant after dark; precipitation looks the same either way.
+ * The icon set, keyed by condition. Kept as a static map so the icon rendered
+ * below is only ever looked up, never produced by a call — a component whose
+ * identity came out of a function would remount on every render.
  */
-function weatherIcon(code: number, isDay: boolean): LucideIcon {
-  if (code === 0) return isDay ? Sun : Moon;
-  if (code === 1 || code === 2) return isDay ? CloudSun : Cloud;
-  if (code === 3) return Cloud;
-  if (code === 45 || code === 48) return CloudFog;
-  if (code >= 51 && code <= 57) return CloudDrizzle;
-  if (code >= 61 && code <= 67) return CloudRain;
-  if (code >= 71 && code <= 77) return CloudSnow;
-  if (code >= 80 && code <= 82) return CloudRain;
-  if (code === 85 || code === 86) return CloudSnow;
-  if (code >= 95) return CloudLightning;
-  return Cloud;
+const WEATHER_ICONS = {
+  clearDay: Sun,
+  clearNight: Moon,
+  partlyCloudyDay: CloudSun,
+  cloudy: Cloud,
+  fog: CloudFog,
+  drizzle: CloudDrizzle,
+  rain: CloudRain,
+  snow: CloudSnow,
+  thunderstorm: CloudLightning,
+  unavailable: CloudOff,
+} satisfies Record<string, LucideIcon>;
+
+type WeatherIconKey = keyof typeof WEATHER_ICONS;
+
+/**
+ * Maps a WMO interpretation code to a key. Clear/partly-cloudy states swap to
+ * a night variant after dark; precipitation looks the same either way.
+ */
+function weatherIconKey(code: number, isDay: boolean): WeatherIconKey {
+  if (code === 0) return isDay ? "clearDay" : "clearNight";
+  if (code === 1 || code === 2) return isDay ? "partlyCloudyDay" : "cloudy";
+  if (code === 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if (code >= 51 && code <= 57) return "drizzle";
+  if (code >= 61 && code <= 67) return "rain";
+  if (code >= 71 && code <= 77) return "snow";
+  if (code >= 80 && code <= 82) return "rain";
+  if (code === 85 || code === 86) return "snow";
+  if (code >= 95) return "thunderstorm";
+  return "cloudy";
 }
 
 export function WeatherWidget({
@@ -42,22 +68,21 @@ export function WeatherWidget({
   airportCode: string;
   city: string;
 }) {
-  const [status, setStatus] = useState<Status>("loading");
-  const [weather, setWeather] = useState<CityWeather | null>(null);
+  // Tagging the result with the city it belongs to lets "loading" be derived
+  // rather than assigned: anything that doesn't match the current prop is, by
+  // definition, still in flight. That also discards responses that arrive
+  // after the city has already changed.
+  const [result, setResult] = useState<WeatherResult | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setStatus("loading");
 
     getCityWeather(city)
-      .then((result) => {
-        if (!cancelled) {
-          setWeather(result);
-          setStatus("success");
-        }
+      .then((weather) => {
+        if (!cancelled) setResult({ city, weather });
       })
       .catch(() => {
-        if (!cancelled) setStatus("error");
+        if (!cancelled) setResult({ city, weather: null });
       });
 
     return () => {
@@ -65,12 +90,21 @@ export function WeatherWidget({
     };
   }, [city]);
 
-  const Icon =
+  const current = result?.city === city ? result : null;
+  const status: Status = !current
+    ? "loading"
+    : current.weather
+      ? "success"
+      : "error";
+  const weather = current?.weather ?? null;
+
+  const iconKey: WeatherIconKey =
     status === "error"
-      ? CloudOff
+      ? "unavailable"
       : weather
-        ? weatherIcon(weather.weatherCode, weather.isDay)
-        : Cloud;
+        ? weatherIconKey(weather.weatherCode, weather.isDay)
+        : "cloudy";
+  const Icon = WEATHER_ICONS[iconKey];
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none">

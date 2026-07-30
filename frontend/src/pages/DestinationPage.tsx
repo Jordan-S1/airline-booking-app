@@ -19,11 +19,18 @@ import type {
 
 type Status = "loading" | "error" | "ready";
 
+/** A settled load, tagged with the airport code it was made for. */
+interface DestinationLoad {
+  code: string;
+  airport: AirportResponseDto | null;
+  flights: FlightSearchResponseDto[];
+}
+
 export function DestinationPage() {
   const { code } = useParams<{ code: string }>();
-  const [status, setStatus] = useState<Status>("loading");
-  const [airport, setAirport] = useState<AirportResponseDto | null>(null);
-  const [flights, setFlights] = useState<FlightSearchResponseDto[]>([]);
+  // Tagging the load with its code lets "loading" be derived rather than
+  // assigned, and drops responses for a destination the user has left.
+  const [load, setLoad] = useState<DestinationLoad | null>(null);
   const [selectedFlight, setSelectedFlight] =
     useState<FlightSearchResponseDto | null>(null);
 
@@ -31,7 +38,6 @@ export function DestinationPage() {
     if (!code) return;
 
     let cancelled = false;
-    setStatus("loading");
 
     (async () => {
       try {
@@ -39,13 +45,10 @@ export function DestinationPage() {
           getAirportByCode(code),
           getArrivalsAt(code),
         ]);
-        if (!cancelled) {
-          setAirport(airportData);
-          setFlights(arrivals);
-          setStatus("ready");
-        }
+        if (!cancelled)
+          setLoad({ code, airport: airportData, flights: arrivals });
       } catch {
-        if (!cancelled) setStatus("error");
+        if (!cancelled) setLoad({ code, airport: null, flights: [] });
       }
     })();
 
@@ -53,6 +56,11 @@ export function DestinationPage() {
       cancelled = true;
     };
   }, [code]);
+
+  const current = code && load?.code === code ? load : null;
+  const status: Status = !current ? "loading" : current.airport ? "ready" : "error";
+  const airport = current?.airport ?? null;
+  const flights = current?.flights ?? [];
 
   const sections: ResultSection[] = [
     {

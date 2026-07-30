@@ -24,16 +24,19 @@ export function AirportAutocomplete({
   );
 
   // Keep the displayed text in sync when the parent changes the value
-  // externally (e.g. the origin/destination swap button).
-  useEffect(() => {
+  // externally (e.g. the origin/destination swap button). Adjusting during
+  // render rather than in an effect means the input never paints the stale
+  // text first.
+  const [appliedValue, setAppliedValue] = useState(value);
+  if (value !== appliedValue) {
+    setAppliedValue(value);
     setQuery(value);
-  }, [value]);
+  }
+
+  const isSearchable = query.trim().length >= 2;
 
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
+    if (!isSearchable) return;
 
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -43,7 +46,11 @@ export function AirportAutocomplete({
     }, 250);
 
     return () => clearTimeout(debounceRef.current);
-  }, [query]);
+  }, [query, isSearchable]);
+
+  // Rather than clearing results when the query gets too short, just stop
+  // showing them — that keeps the last fetch usable if the user types again.
+  const visibleResults = isSearchable ? results : [];
 
   const handleSelect = (airport: AirportResponseDto) => {
     setQuery(airport.code);
@@ -75,7 +82,7 @@ export function AirportAutocomplete({
       </label>
 
       <AnimatePresence>
-        {isOpen && results.length > 0 && (
+        {isOpen && visibleResults.length > 0 && (
           <motion.ul
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -83,7 +90,7 @@ export function AirportAutocomplete({
             transition={{ duration: 0.15 }}
             className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-obsidian-raised"
           >
-            {results.map((airport) => (
+            {visibleResults.map((airport) => (
               <li key={airport.id}>
                 <button
                   type="button"

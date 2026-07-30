@@ -1,36 +1,32 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getCurrencies } from "../api/currency";
 import { useAuth } from "./auth";
+import {
+  BASE_CURRENCY,
+  CurrencyContext,
+  CURRENCY_STORAGE_KEY,
+  type CurrencyContextValue,
+} from "./currency";
 import type { CurrencyDto } from "../types/currency";
 
-const STORAGE_KEY = "skyair-currency";
-const BASE_CURRENCY = "EUR";
-
-interface CurrencyContextValue {
-  currencies: CurrencyDto[];
-  selectedCode: string;
-  setSelectedCode: (code: string) => void;
-  /** Formats a EUR-denominated amount into the selected display currency. */
-  formatPrice: (eurAmount: number) => string;
-}
-
-const CurrencyContext = createContext<CurrencyContextValue | null>(null);
-
 function getInitialCode(): string {
-  return localStorage.getItem(STORAGE_KEY) ?? BASE_CURRENCY;
+  return localStorage.getItem(CURRENCY_STORAGE_KEY) ?? BASE_CURRENCY;
 }
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [currencies, setCurrencies] = useState<CurrencyDto[]>([]);
-  const [selectedCode, setSelectedCodeState] = useState<string>(getInitialCode);
+  const [selectedCode, setSelectedCode] = useState<string>(getInitialCode);
+
+  // When a user logs in, follow their saved preferred currency. Adjusting
+  // during render rather than in an effect avoids a throwaway pass rendering
+  // prices in the previous currency before the new one lands.
+  const preferred = user?.preferredCurrency;
+  const [appliedPreference, setAppliedPreference] = useState(preferred);
+  if (preferred && preferred !== appliedPreference) {
+    setAppliedPreference(preferred);
+    setSelectedCode(preferred);
+  }
 
   useEffect(() => {
     getCurrencies()
@@ -38,18 +34,9 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       .catch(() => setCurrencies([]));
   }, []);
 
-  // When a user logs in, follow their saved preferred currency.
   useEffect(() => {
-    if (user?.preferredCurrency) {
-      setSelectedCodeState(user.preferredCurrency);
-      localStorage.setItem(STORAGE_KEY, user.preferredCurrency);
-    }
-  }, [user?.preferredCurrency]);
-
-  const setSelectedCode = (code: string) => {
-    setSelectedCodeState(code);
-    localStorage.setItem(STORAGE_KEY, code);
-  };
+    localStorage.setItem(CURRENCY_STORAGE_KEY, selectedCode);
+  }, [selectedCode]);
 
   const value = useMemo<CurrencyContextValue>(() => {
     const active = currencies.find((c) => c.code === selectedCode);
@@ -76,10 +63,4 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       {children}
     </CurrencyContext.Provider>
   );
-}
-
-export function useCurrency() {
-  const ctx = useContext(CurrencyContext);
-  if (!ctx) throw new Error("useCurrency must be used within a CurrencyProvider");
-  return ctx;
 }

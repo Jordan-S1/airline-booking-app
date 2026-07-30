@@ -1,40 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import * as authApi from "../api/auth";
 import { setAuthToken } from "./authToken";
-import type {
-  AuthResponseDto,
-  LoginRequestDto,
-  RegisterRequestDto,
-} from "../types/auth";
-
-const USER_STORAGE_KEY = "skyair-auth-user";
-
-export interface AuthUser {
-  userId: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  preferredCurrency: string;
-}
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  login: (request: LoginRequestDto) => Promise<void>;
-  register: (request: RegisterRequestDto) => Promise<void>;
-  logout: () => void;
-  /** Patch the cached user after a profile update, keeping local state in sync. */
-  updateStoredUser: (patch: Partial<AuthUser>) => void;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+import {
+  AuthContext,
+  USER_STORAGE_KEY,
+  type AuthContextValue,
+  type AuthUser,
+} from "./auth";
+import type { AuthResponseDto } from "../types/auth";
 
 function readStoredUser(): AuthUser | null {
   const raw = localStorage.getItem(USER_STORAGE_KEY);
@@ -93,10 +66,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
-  return ctx;
 }

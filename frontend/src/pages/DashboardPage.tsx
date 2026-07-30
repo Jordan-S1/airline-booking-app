@@ -30,6 +30,20 @@ type SearchStatus = "idle" | "loading" | "error" | "success";
 type TrackedStatus = "loading" | "error" | "empty" | "ready";
 type BookingsStatus = "loading" | "error" | "ready";
 
+/** The tracked flight, or where its lookup got to. `null` means none was found. */
+type TrackedResult = "loading" | "error" | FlightStatusDto | null;
+
+/**
+ * The dashboard's per-user data, tagged with the user it was loaded for.
+ * Everything the widgets read is derived from this, so switching user makes the
+ * UI fall back to "loading" on its own rather than an effect resetting it.
+ */
+interface DashboardLoad {
+  userId: number;
+  bookings: BookingResponseDto[] | "error";
+  tracked: TrackedResult;
+}
+
 /** A leg of the current search, with whichever flight the user picked for it. */
 interface SearchLeg {
   id: string;
@@ -66,73 +80,60 @@ export function DashboardPage() {
   const [bookingFlights, setBookingFlights] = useState<
     FlightSearchResponseDto[] | null
   >(null);
-  const [trackedStatus, setTrackedStatus] = useState<TrackedStatus>("loading");
-  const [trackedFlight, setTrackedFlight] = useState<FlightStatusDto | null>(
-    null,
-  );
-  // Fetched once and shared by the status widget and the travel stats card.
-  const [bookings, setBookings] = useState<BookingResponseDto[]>([]);
-  const [bookingsStatus, setBookingsStatus] =
-    useState<BookingsStatus>("loading");
+  // Bookings are fetched once here and shared by the status widget and the
+  // travel stats card.
+  const [load, setLoad] = useState<DashboardLoad | null>(null);
 
   // Track the signed-in user's most relevant booking: the next flight that
   // hasn't landed yet, falling back to their most recent one.
   useEffect(() => {
-    if (!user) {
-      setTrackedFlight(null);
-      setTrackedStatus("empty");
-      setBookings([]);
-      setBookingsStatus("ready");
-      return;
-    }
+    if (!user) return;
 
+    const userId = user.userId;
     let cancelled = false;
-    setTrackedStatus("loading");
-    setBookingsStatus("loading");
 
     (async () => {
+      let userBookings: BookingResponseDto[];
       try {
-        const bookings = await getBookingsByUser(user.userId);
-        if (!cancelled) {
-          setBookings(bookings);
-          setBookingsStatus("ready");
-        }
-
-        const active = bookings.filter((b) => b.status !== "CANCELLED");
-
-        if (active.length === 0) {
-          if (!cancelled) {
-            setTrackedFlight(null);
-            setTrackedStatus("empty");
-          }
-          return;
-        }
-
-        const now = Date.now();
-        const upcoming = active
-          .filter((b) => new Date(b.arrivalTime).getTime() >= now)
-          .sort(
-            (a, b) =>
-              new Date(a.departureTime).getTime() -
-              new Date(b.departureTime).getTime(),
-          );
-        const mostRecent = [...active].sort(
-          (a, b) =>
-            new Date(b.departureTime).getTime() -
-            new Date(a.departureTime).getTime(),
-        );
-        const target = upcoming[0] ?? mostRecent[0];
-
-        const status = await getFlightStatus(target.flightId);
-        if (!cancelled) {
-          setTrackedFlight(status);
-          setTrackedStatus("ready");
-        }
+        userBookings = await getBookingsByUser(userId);
       } catch {
-        if (!cancelled) {
-          setTrackedStatus("error");
-          setBookingsStatus("error");
-        }
+        if (!cancelled)
+          setLoad({ userId, bookings: "error", tracked: "error" });
+        return;
+      }
+      if (cancelled) return;
+
+      const active = userBookings.filter((b) => b.status !== "CANCELLED");
+      if (active.length === 0) {
+        setLoad({ userId, bookings: userBookings, tracked: null });
+        return;
+      }
+
+      // Show the bookings straight away; the flight status is a second hop.
+      setLoad({ userId, bookings: userBookings, tracked: "loading" });
+
+      const now = Date.now();
+      const upcoming = active
+        .filter((b) => new Date(b.arrivalTime).getTime() >= now)
+        .sort(
+          (a, b) =>
+            new Date(a.departureTime).getTime() -
+            new Date(b.departureTime).getTime(),
+        );
+      const mostRecent = [...active].sort(
+        (a, b) =>
+          new Date(b.departureTime).getTime() -
+          new Date(a.departureTime).getTime(),
+      );
+      const target = upcoming[0] ?? mostRecent[0];
+
+      try {
+        const status = await getFlightStatus(target.flightId);
+        if (!cancelled)
+          setLoad({ userId, bookings: userBookings, tracked: status });
+      } catch {
+        if (!cancelled)
+          setLoad({ userId, bookings: userBookings, tracked: "error" });
       }
     })();
 
@@ -140,6 +141,36 @@ export function DashboardPage() {
       cancelled = true;
     };
   }, [user]);
+
+  // Anything not tagged with the current user is stale, which covers both the
+  // signed-out case and the gap right after switching accounts.
+  const current = user && load?.userId === user.userId ? load : null;
+
+  const bookingsStatus: BookingsStatus = !user
+    ? "ready"
+    : !current
+      ? "loading"
+      : current.bookings === "error"
+        ? "error"
+        : "ready";
+  const bookings = current && current.bookings !== "error" ? current.bookings : [];
+
+  const trackedStatus: TrackedStatus = !user
+    ? "empty"
+    : !current || current.tracked === "loading"
+      ? "loading"
+      : current.tracked === "error"
+        ? "error"
+        : current.tracked === null
+          ? "empty"
+          : "ready";
+  const trackedFlight =
+    current &&
+    current.tracked !== null &&
+    current.tracked !== "loading" &&
+    current.tracked !== "error"
+      ? current.tracked
+      : null;
 
   /**
    * The search panel already lives on this page, so the empty-state CTA scrolls
