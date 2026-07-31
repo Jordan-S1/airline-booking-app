@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 import { useCurrency } from "../lib/currency";
-import { formatLocalTime } from "../lib/datetime";
+import {
+  arrivalDayOffset,
+  formatLocalDate,
+  formatLocalTime,
+} from "../lib/datetime";
 import type { FlightSearchResponseDto } from "../types/flight";
 
 function formatDuration(minutes: number) {
@@ -15,13 +19,16 @@ function FlightResultCard({
   onSelect,
   isSelected,
   selectLabel,
+  showDate,
 }: {
   flight: FlightSearchResponseDto;
   onSelect: (flight: FlightSearchResponseDto) => void;
   isSelected: boolean;
   selectLabel: string;
+  showDate: boolean;
 }) {
   const { formatPrice } = useCurrency();
+  const dayOffset = arrivalDayOffset(flight);
   return (
     <motion.div
       layout
@@ -41,6 +48,13 @@ function FlightResultCard({
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
             {flight.airlineName}
           </p>
+          {/* A search already fixes the date, so it is only shown where the
+              list spans many days — the arrivals board on a destination. */}
+          {showDate && (
+            <p className="mt-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              {formatLocalDate(flight.departureTime, flight.departureTimezone)}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -61,6 +75,16 @@ function FlightResultCard({
           <div>
             <p className="font-mono text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {formatLocalTime(flight.arrivalTime, flight.arrivalTimezone)}
+              {/* Overnight arrivals need the day marker, or the pair of times
+                  reads as landing before take-off. */}
+              {dayOffset > 0 && (
+                <sup
+                  className="ml-0.5 text-[10px] font-semibold text-accent"
+                  title={`Arrives ${dayOffset} day${dayOffset > 1 ? "s" : ""} later`}
+                >
+                  +{dayOffset}
+                </sup>
+              )}
             </p>
             <p className="text-xs text-zinc-400 dark:text-zinc-500">
               {flight.arrivalAirport}
@@ -114,6 +138,13 @@ interface FlightResultsListProps {
   /** Defaults to "Search results"; overridden when reused outside the dashboard. */
   heading?: string;
   emptyMessage?: string;
+  /** Rendered between the heading and the results — e.g. a filter bar. */
+  toolbar?: React.ReactNode;
+  /**
+   * Show each flight's departure date. Off for searches, where the date is
+   * already fixed by the query; on for lists that span the whole horizon.
+   */
+  showDates?: boolean;
 }
 
 export function FlightResultsList({
@@ -124,6 +155,8 @@ export function FlightResultsList({
   footer,
   heading = "Search results",
   emptyMessage = "No flights found for this route and date.",
+  toolbar,
+  showDates = false,
 }: FlightResultsListProps) {
   if (status === "idle") return null;
 
@@ -138,6 +171,8 @@ export function FlightResultsList({
       <h2 className="mb-4 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
         {heading}
       </h2>
+
+      {toolbar && <div className="mb-5">{toolbar}</div>}
 
       {status === "loading" && (
         <div className="flex items-center gap-3 py-6 text-sm text-zinc-500 dark:text-zinc-400">
@@ -181,6 +216,7 @@ export function FlightResultsList({
                       flight={flight}
                       isSelected={section.selectedFlightId === flight.id}
                       selectLabel={isMultiSection ? "Select" : "Book"}
+                      showDate={showDates}
                       onSelect={(f) => onSelectFlight(section.id, f)}
                     />
                   ))}

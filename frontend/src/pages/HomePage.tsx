@@ -11,7 +11,7 @@ const FEATURES = [
   {
     icon: Sparkles,
     title: "Effortless booking",
-    body: "From search to confirmation in a few taps — passenger details, payment, done.",
+    body: "From search to confirmation in a few taps - passenger details, payment, done.",
   },
   {
     icon: ShieldCheck,
@@ -20,7 +20,13 @@ const FEATURES = [
   },
 ];
 
-const ROUTES = ["DUB → LHR", "LHR → MAD", "DUB → CDG", "FRA → AMS", "DUB → BCN"];
+const ROUTES = [
+  "DUB → LHR",
+  "LHR → MAD",
+  "DUB → CDG",
+  "FRA → AMS",
+  "DUB → BCN",
+];
 
 export function HomePage() {
   return (

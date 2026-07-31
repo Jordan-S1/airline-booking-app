@@ -52,6 +52,11 @@ services:
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       DDL_AUTO: ${DDL_AUTO:-validate}
       SERVER_PORT: ${SERVER_PORT:-8080}
+      # Mock payment gateway. Off by default; set the rate to 1.0 to exercise
+      # the failure path deliberately, e.g.
+      #   PAYMENT_SIMULATED_FAILURE_RATE=1.0 docker compose --profile app up -d
+      PAYMENT_SIMULATED_FAILURE_RATE: ${PAYMENT_SIMULATED_FAILURE_RATE:-0.0}
+      PAYMENT_SIMULATED_LATENCY_MS: ${PAYMENT_SIMULATED_LATENCY_MS:-600}
     depends_on:
       db:
         condition: service_healthy

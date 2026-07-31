@@ -38,6 +38,7 @@ function BookingCard({
   cancelling: boolean;
 }) {
   const { formatPrice } = useCurrency();
+  const [confirming, setConfirming] = useState(false);
   const canCancel =
     booking.status !== "CANCELLED" && booking.status !== "COMPLETED";
 
@@ -111,10 +112,10 @@ function BookingCard({
           >
             Details
           </Link>
-          {canCancel && (
+          {canCancel && !confirming && (
             <button
               type="button"
-              onClick={() => onCancel(booking.bookingReference)}
+              onClick={() => setConfirming(true)}
               disabled={cancelling}
               className="cursor-pointer rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:border-red-300 hover:text-red-500 disabled:opacity-60 dark:border-white/10 dark:text-zinc-300"
             >
@@ -123,6 +124,38 @@ function BookingCard({
           )}
         </div>
       </div>
+
+      {/* Cancelling now returns the money too, so it is worth a deliberate
+          second click — and worth saying what will be refunded, since that is
+          the part the traveller cannot undo. */}
+      {confirming && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-400/20 dark:bg-red-400/10">
+          <p className="text-sm text-red-700 dark:text-red-400">
+            Cancel this flight and refund {formatPrice(booking.totalAmount)}?
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={cancelling}
+              className="cursor-pointer rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-60 dark:border-red-400/30 dark:text-red-400 dark:hover:bg-red-400/10"
+            >
+              Keep it
+            </button>
+            <button
+              type="button"
+              onClick={() => onCancel(booking.bookingReference)}
+              disabled={cancelling}
+              className="flex cursor-pointer items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+            >
+              {cancelling && (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {cancelling ? "Cancelling…" : "Cancel and refund"}
+            </button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

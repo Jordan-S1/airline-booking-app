@@ -4,12 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -119,6 +121,35 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex, HttpServletRequest request) {
         log.warn("Illegal argument: {}", ex.getMessage());
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    /**
+     * A path or query parameter that cannot be coerced to the declared type —
+     * {@code /flights/EK412/status} where the handler takes a {@code Long}, say.
+     * That is a malformed request, not a server fault, so it must not fall
+     * through to the catch-all below and report 500.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String expectedType = ex.getRequiredType() == null
+                ? "the expected type"
+                : ex.getRequiredType().getSimpleName();
+        String message = "Parameter '%s' must be %s".formatted(ex.getName(), expectedType);
+
+        log.warn("Type mismatch at {}: {}", request.getRequestURI(), message);
+        return build(HttpStatus.BAD_REQUEST, message, request);
+    }
+
+    /**
+     * A request body that isn't parseable at all — malformed JSON, or a value
+     * that cannot be bound to the target type. Also a client error.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Unreadable request body at {}: {}", request.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, "Malformed request body", request);
     }
 
     /**

@@ -61,6 +61,17 @@ opensky:
     lamax: ${OPENSKY_BBOX_LAMAX:56.0}
     lomax: ${OPENSKY_BBOX_LOMAX:2.0}
 
+# Mock payment gateway
+# simulated-failure-rate is the probability a charge is rejected, for
+# exercising the failure path deliberately. It defaults to 0 — a gateway that
+# fails at random makes every other booking attempt look like a bug, and there
+# is no way to tell a simulated rejection from a real defect.
+# Set e.g. 1.0 to make every payment fail, or 0.1 for the old behaviour.
+payments:
+  gateway:
+    simulated-failure-rate: ${PAYMENT_SIMULATED_FAILURE_RATE:0.0}
+    simulated-latency-ms: ${PAYMENT_SIMULATED_LATENCY_MS:600}
+
 # Swagger / OpenAPI
 springdoc:
   api-docs:

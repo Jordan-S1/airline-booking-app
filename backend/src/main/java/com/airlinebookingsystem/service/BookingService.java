@@ -32,6 +32,7 @@ public class BookingService {
     private final FlightRepository flightRepository;
     private final UserRepository userRepository;
     private final PassengerService passengerService;
+    private final PaymentSettlementService paymentSettlementService;
 
     /**
      * Creates a new booking.
@@ -187,6 +188,13 @@ public class BookingService {
             throw new BookingException("Booking is already cancelled: " + bookingReference);
         }
 
+        // Give the money back before releasing the seat. Cancelling a paid
+        // booking without refunding it leaves the customer charged for a trip
+        // they no longer hold, and a failed refund must abort the cancellation
+        // outright rather than land them in that state — which the surrounding
+        // transaction guarantees by rolling the whole thing back.
+        boolean refunded = paymentSettlementService.refundIfCharged(booking).isPresent();
+
         booking.setStatus(Booking.BookingStatus.CANCELLED);
         booking = bookingRepository.save(booking);
 
@@ -196,7 +204,8 @@ public class BookingService {
                 flight, booking.getSeatClass().name(), booking.getNumberOfPassengers(), true);
         flightRepository.save(flight);
 
-        log.info("Booking {} cancelled", bookingReference);
+        log.info("Booking {} cancelled{}", bookingReference,
+                refunded ? " and refunded" : " (no charge to refund)");
         return mapToBookingResponse(booking);
     }
 

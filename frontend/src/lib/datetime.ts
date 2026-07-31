@@ -66,6 +66,44 @@ export function formatLocalDateTime(iso: string, timezone: string | null | undef
   });
 }
 
+/** The local calendar date at a given zone, as YYYY-MM-DD. */
+function localDateKey(iso: string, timezone: string | null | undefined): string {
+  return formatInZone(iso, timezone, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+/**
+ * How many local calendar days later the arrival falls — the "+1" an airline
+ * timetable puts beside an overnight arrival.
+ *
+ * Comparing local dates rather than raw elapsed hours is the point: a flight
+ * can run thirteen hours and still land the same calendar day heading east,
+ * or run two hours and land the next day crossing midnight. Roughly a third of
+ * this network's flights land on a later day than they leave, and without this
+ * marker "11:30 PM → 05:50 AM" reads as arriving before it departed.
+ */
+export function arrivalDayOffset(flight: {
+  departureTime: string;
+  arrivalTime: string;
+  departureTimezone: string | null;
+  arrivalTimezone: string | null;
+}): number {
+  const departure = new Date(
+    localDateKey(flight.departureTime, flight.departureTimezone),
+  );
+  const arrival = new Date(
+    localDateKey(flight.arrivalTime, flight.arrivalTimezone),
+  );
+  if (Number.isNaN(departure.getTime()) || Number.isNaN(arrival.getTime())) {
+    return 0;
+  }
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((arrival.getTime() - departure.getTime()) / msPerDay);
+}
+
 /**
  * The airport's UTC offset as "GMT+9", for labelling a time that is not in the
  * viewer's own zone. Long-haul arrival times are otherwise quietly confusing.

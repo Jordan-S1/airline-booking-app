@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Plane } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Plane } from "lucide-react";
 import { RouteMap } from "./RouteMap";
 import {
   formatLocalDate,
@@ -62,6 +62,16 @@ interface FlightStatusWidgetProps {
   status: "loading" | "error" | "empty" | "ready";
   flight: FlightStatusDto | null;
   isAuthenticated: boolean;
+  /**
+   * Position within the traveller's upcoming flights, when there is more than
+   * one. Omitted entirely for a single flight so no controls are rendered.
+   */
+  tracking?: {
+    index: number;
+    total: number;
+    onPrev: () => void;
+    onNext: () => void;
+  };
   /** Empty-state CTA when signed in — the page decides where the search lives. */
   onFindFlights: () => void;
   /** Empty-state CTA when signed out; there's nothing to track until you log in. */
@@ -72,6 +82,7 @@ export function FlightStatusWidget({
   status,
   flight,
   isAuthenticated,
+  tracking,
   onFindFlights,
   onSignIn,
 }: FlightStatusWidgetProps) {
@@ -158,6 +169,34 @@ export function FlightStatusWidget({
             {flight.aircraft ?? "Aircraft TBC"} ·{" "}
             {formatLocalDate(flight.departureTime, flight.departureTimezone)}
           </p>
+
+          {/* Only shown once there is somewhere to go. With a single upcoming
+              flight the arrows would be permanently disabled chrome. */}
+          {tracking && tracking.total > 1 && (
+            <div className="mt-3 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={tracking.onPrev}
+                disabled={tracking.index === 0}
+                aria-label="Previous flight"
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-zinc-100"
+              >
+                <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+              </button>
+              <span className="px-1 text-xs font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
+                {tracking.index + 1} of {tracking.total}
+              </span>
+              <button
+                type="button"
+                onClick={tracking.onNext}
+                disabled={tracking.index === tracking.total - 1}
+                aria-label="Next flight"
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-zinc-100"
+              >
+                <ChevronRight className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+          )}
         </div>
 
         <span

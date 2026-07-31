@@ -2,18 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Check,
-  CreditCard,
-  Landmark,
-  WalletCards,
-  X,
-} from "lucide-react";
+import { Check, CreditCard, Landmark, WalletCards, X } from "lucide-react";
 import { FaPaypal } from "react-icons/fa6";
 import type { ComponentType } from "react";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
-import { createBooking, confirmBooking } from "../api/bookings";
+import { createBooking, confirmBooking, cancelBooking } from "../api/bookings";
 import { createPayment } from "../api/payments";
 import { AuthModal } from "./AuthModal";
 import { SelectField, type SelectOption } from "./SelectField";
@@ -178,6 +172,42 @@ export function BookingModal({
     setStep("payment");
   };
 
+  /**
+   * Undoes whatever the itinerary managed to book. Cancelling refunds the leg
+   * if it was charged and is a no-op on the money if it wasn't, so paid and
+   * unpaid legs are released the same way.
+   *
+   * Each leg is released independently and failures are collected rather than
+   * thrown, so one stubborn leg cannot strand the rest.
+   */
+  const rollbackItinerary = async (
+    bookedLegs: BookingResponseDto[],
+    unpaidBooking: BookingResponseDto | null,
+  ): Promise<{ releasedCount: number; failures: string[] }> => {
+    const failures: string[] = [];
+    let releasedCount = 0;
+
+    const toRelease = unpaidBooking
+      ? [...bookedLegs, unpaidBooking]
+      : bookedLegs;
+
+    for (const booking of toRelease) {
+      try {
+        await cancelBooking(booking.bookingReference);
+        releasedCount += 1;
+      } catch {
+        failures.push(booking.bookingReference);
+      }
+    }
+
+    // The never-charged leg is released too, but it is not what the wording
+    // downstream is counting — that speaks to money returned.
+    return {
+      releasedCount: Math.min(releasedCount, bookedLegs.length),
+      failures,
+    };
+  };
+
   /** Red border while a field is flagged, normal styling once it's fixed. */
   const fieldBorder = (index: number, field: keyof PassengerRequestDto) =>
     invalidFields.has(fieldKey(index, field))
@@ -187,15 +217,24 @@ export function BookingModal({
   /**
    * Books each leg in turn. The API models one booking per flight, so a
    * multi-leg itinerary produces one reference per leg rather than a single
-   * PNR. If a later leg fails, earlier legs stay booked — the error names the
-   * leg so the user knows exactly where it stopped.
+   * PNR.
+   *
+   * An itinerary is all-or-nothing from the traveller's point of view: half a
+   * round trip is not a cheaper round trip, it is a stranded passenger holding
+   * a charge for a flight home they never got. Because the legs are separate
+   * bookings there is no transaction spanning them, so a failure is undone by
+   * compensating — refunding each leg already paid for, and cancelling a
+   * booking that was created but never charged.
    */
   const handleConfirmAndPay = async () => {
     if (!user) return;
     setIsSubmitting(true);
     setError(null);
 
-    const completed: BookingResponseDto[] = [];
+    const paidLegs: BookingResponseDto[] = [];
+    // Set between creating a booking and charging it — the window in which a
+    // failure leaves an unpaid PENDING booking sitting on a seat.
+    let unpaidBooking: BookingResponseDto | null = null;
 
     try {
       for (const flight of flights) {
@@ -204,27 +243,42 @@ export function BookingModal({
           seatClass,
           passengers,
         });
+        unpaidBooking = booking;
+
         await createPayment({ bookingId: booking.id, paymentMethod });
-        completed.push(await confirmBooking(booking.bookingReference));
+        paidLegs.push(await confirmBooking(booking.bookingReference));
+        unpaidBooking = null;
       }
-      setConfirmedBookings(completed);
+
+      setConfirmedBookings(paidLegs);
       setStep("confirmation");
     } catch (err) {
-      const failedLeg = completed.length + 1;
+      const failedLeg = paidLegs.length + 1;
       const base = extractErrorMessage(
         err,
         "Something went wrong with your booking.",
       );
-      setError(
-        isMultiLeg
-          ? `${base} (failed on leg ${failedLeg} of ${flights.length}${
-              completed.length > 0
-                ? `; legs 1-${completed.length} were booked`
-                : ""
-            })`
-          : base,
-      );
-      if (completed.length > 0) setConfirmedBookings(completed);
+
+      const undone = await rollbackItinerary(paidLegs, unpaidBooking);
+
+      if (!isMultiLeg) {
+        setError(base);
+      } else if (undone.failures.length > 0) {
+        // Rolling back failed too — name the references so support can finish
+        // by hand rather than leaving the traveller to discover it later.
+        setError(
+          `${base} (failed on leg ${failedLeg} of ${flights.length}). We could not ` +
+            `automatically release ${undone.failures.join(", ")} - please contact support.`,
+        );
+      } else {
+        setError(
+          `${base} (failed on leg ${failedLeg} of ${flights.length}). ` +
+            (undone.releasedCount > 0
+              ? `The other ${undone.releasedCount === 1 ? "leg has" : "legs have"} been ` +
+                `cancelled and refunded, so nothing has been charged.`
+              : "Nothing has been charged."),
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -450,9 +504,7 @@ export function BookingModal({
                       >
                         <Icon
                           className={`h-4 w-4 shrink-0 ${
-                            isSelected
-                              ? ""
-                              : "text-zinc-400 dark:text-zinc-500"
+                            isSelected ? "" : "text-zinc-400 dark:text-zinc-500"
                           }`}
                           strokeWidth={1.8}
                         />
@@ -530,7 +582,7 @@ export function BookingModal({
                 <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
                   {confirmedBookings.length === 1
                     ? "Your booking is confirmed."
-                    : `All ${confirmedBookings.length} legs are confirmed — each leg has its own reference.`}{" "}
+                    : `All ${confirmedBookings.length} legs are confirmed - each leg has its own reference.`}{" "}
                   {confirmedBookings.length === 1
                     ? "Find it any time under Trips."
                     : "Find them any time under Trips."}

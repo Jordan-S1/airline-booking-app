@@ -122,33 +122,23 @@ public class PaymentService {
             throw new BookingException("Payment cannot be refunded. Current status: " + payment.getStatus());
         }
 
-        // Always refund the full amount — partial refunds not supported.
-        // A refund means the trip is canceled entirely.
-        BigDecimal amountToRefund = payment.getAmount();
+        // Refunds are always full — a refund means the trip is off entirely —
+        // so this is just cancelling the booking, which now returns the money
+        // as part of doing so. Delegating rather than repeating that here is
+        // what keeps the two entry points from drifting apart: whichever the
+        // caller reaches for, the booking ends up cancelled, the seat released
+        // and the charge returned.
+        bookingService.cancelBooking(payment.getBooking().getBookingReference());
 
-        try {
-            // Process refund through gateway
-            String refundResponse = paymentGatewayService.processRefund(
-                    transactionId,
-                    amountToRefund);
+        // Re-read so the caller sees REFUNDED rather than the stale SUCCESS
+        // loaded above.
+        Payment settled = paymentRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", transactionId));
 
-            // Update payment status
-            payment.setStatus(Payment.PaymentStatus.REFUNDED);
-            payment.setPaymentGatewayResponse(refundResponse);
-            payment = paymentRepository.save(payment);
+        log.info("Refund successful for transaction ID: {} — booking cancelled, seats restored",
+                transactionId);
 
-            // Cancel the booking and restore flight seats
-            bookingService.cancelBooking(payment.getBooking().getBookingReference());
-
-            log.info("Refund successful for transaction ID: {} — booking cancelled, seats restored",
-                    transactionId);
-
-        } catch (Exception e) {
-            log.error("Refund failed for transaction ID: {}", transactionId, e);
-            throw new BookingException("Refund processing failed: " + e.getMessage());
-        }
-
-        return convertToResponseDTO(payment);
+        return convertToResponseDTO(settled);
     }
 
     /**

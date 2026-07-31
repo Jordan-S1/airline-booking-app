@@ -21,18 +21,15 @@ import { getBookingsByUser } from "../api/bookings";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
 import { parseApiInstant } from "../lib/datetime";
-import type {
-  FlightSearchResponseDto,
-  FlightStatusDto,
-} from "../types/flight";
+import type { FlightSearchResponseDto, FlightStatusDto } from "../types/flight";
 import type { BookingResponseDto } from "../types/booking";
 
 type SearchStatus = "idle" | "loading" | "error" | "success";
 type TrackedStatus = "loading" | "error" | "empty" | "ready";
 type BookingsStatus = "loading" | "error" | "ready";
 
-/** The tracked flight, or where its lookup got to. `null` means none was found. */
-type TrackedResult = "loading" | "error" | FlightStatusDto | null;
+/** A flight's live status, or how its lookup went. */
+type StatusResult = "error" | FlightStatusDto;
 
 /**
  * The dashboard's per-user data, tagged with the user it was loaded for.
@@ -42,7 +39,11 @@ type TrackedResult = "loading" | "error" | FlightStatusDto | null;
 interface DashboardLoad {
   userId: number;
   bookings: BookingResponseDto[] | "error";
-  tracked: TrackedResult;
+  /**
+   * Bookings worth tracking, soonest departure first — every upcoming flight,
+   * or just the most recent one if they have all been and gone.
+   */
+  trackable: BookingResponseDto[];
 }
 
 /** A leg of the current search, with whichever flight the user picked for it. */
@@ -72,6 +73,7 @@ export function DashboardPage() {
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
   const searchPanelRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [searchStatus, setSearchStatus] = useState<SearchStatus>("idle");
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -84,9 +86,16 @@ export function DashboardPage() {
   // Bookings are fetched once here and shared by the status widget and the
   // travel stats card.
   const [load, setLoad] = useState<DashboardLoad | null>(null);
+  const [trackedIndex, setTrackedIndex] = useState(0);
+  /**
+   * Live status per flight id. Statuses are fetched for the flight on screen
+   * rather than all of them up front, so a traveller with eight trips does not
+   * pay for eight requests to look at one.
+   */
+  const [statuses, setStatuses] = useState<Record<number, StatusResult>>({});
 
-  // Track the signed-in user's most relevant booking: the next flight that
-  // hasn't landed yet, falling back to their most recent one.
+  // Track the signed-in user's bookings: every flight that hasn't landed yet,
+  // soonest first, falling back to their most recent one.
   useEffect(() => {
     if (!user) return;
 
@@ -98,21 +107,12 @@ export function DashboardPage() {
       try {
         userBookings = await getBookingsByUser(userId);
       } catch {
-        if (!cancelled)
-          setLoad({ userId, bookings: "error", tracked: "error" });
+        if (!cancelled) setLoad({ userId, bookings: "error", trackable: [] });
         return;
       }
       if (cancelled) return;
 
       const active = userBookings.filter((b) => b.status !== "CANCELLED");
-      if (active.length === 0) {
-        setLoad({ userId, bookings: userBookings, tracked: null });
-        return;
-      }
-
-      // Show the bookings straight away; the flight status is a second hop.
-      setLoad({ userId, bookings: userBookings, tracked: "loading" });
-
       const now = Date.now();
       const upcoming = active
         .filter((b) => parseApiInstant(b.arrivalTime).getTime() >= now)
@@ -126,16 +126,12 @@ export function DashboardPage() {
           parseApiInstant(b.departureTime).getTime() -
           parseApiInstant(a.departureTime).getTime(),
       );
-      const target = upcoming[0] ?? mostRecent[0];
 
-      try {
-        const status = await getFlightStatus(target.flightId);
-        if (!cancelled)
-          setLoad({ userId, bookings: userBookings, tracked: status });
-      } catch {
-        if (!cancelled)
-          setLoad({ userId, bookings: userBookings, tracked: "error" });
-      }
+      setLoad({
+        userId,
+        bookings: userBookings,
+        trackable: upcoming.length > 0 ? upcoming : mostRecent.slice(0, 1),
+      });
     })();
 
     return () => {
@@ -154,24 +150,68 @@ export function DashboardPage() {
       : current.bookings === "error"
         ? "error"
         : "ready";
-  const bookings = current && current.bookings !== "error" ? current.bookings : [];
+  const bookings =
+    current && current.bookings !== "error" ? current.bookings : [];
+
+  // Reset to the soonest flight when the user changes, rather than leaving the
+  // previous account's position pointing into a different list.
+  const [appliedUserId, setAppliedUserId] = useState<number | null>(
+    user?.userId ?? null,
+  );
+  if ((user?.userId ?? null) !== appliedUserId) {
+    setAppliedUserId(user?.userId ?? null);
+    setTrackedIndex(0);
+  }
+
+  const trackable = current?.trackable ?? [];
+  // Clamping rather than resetting means a list that shrinks underneath the
+  // selection lands somewhere valid without an effect having to notice.
+  const selectedIndex = Math.min(
+    trackedIndex,
+    Math.max(trackable.length - 1, 0),
+  );
+  const selectedBooking = trackable[selectedIndex] ?? null;
+  const selectedStatus = selectedBooking
+    ? statuses[selectedBooking.flightId]
+    : undefined;
+
+  // Fetch the status for whichever flight is on screen, once.
+  useEffect(() => {
+    if (!selectedBooking) return;
+    const { flightId } = selectedBooking;
+    if (statuses[flightId]) return;
+
+    let cancelled = false;
+    getFlightStatus(flightId)
+      .then((status) => {
+        if (!cancelled)
+          setStatuses((prev) => ({ ...prev, [flightId]: status }));
+      })
+      .catch(() => {
+        if (!cancelled)
+          setStatuses((prev) => ({ ...prev, [flightId]: "error" }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBooking, statuses]);
 
   const trackedStatus: TrackedStatus = !user
     ? "empty"
-    : !current || current.tracked === "loading"
+    : !current
       ? "loading"
-      : current.tracked === "error"
+      : current.bookings === "error"
         ? "error"
-        : current.tracked === null
+        : trackable.length === 0
           ? "empty"
-          : "ready";
+          : !selectedStatus
+            ? "loading"
+            : selectedStatus === "error"
+              ? "error"
+              : "ready";
   const trackedFlight =
-    current &&
-    current.tracked !== null &&
-    current.tracked !== "loading" &&
-    current.tracked !== "error"
-      ? current.tracked
-      : null;
+    selectedStatus && selectedStatus !== "error" ? selectedStatus : null;
 
   /**
    * The search panel already lives on this page, so the empty-state CTA scrolls
@@ -293,6 +333,18 @@ export function DashboardPage() {
     selectedFlightId: leg.selected?.id ?? null,
   }));
 
+  // Only worth jumping the page when there is something to look at. A failed
+  // search, or one that matched nothing, leaves the reader where they are —
+  // the message they need is up beside the form they just filled in.
+  const hasResults =
+    searchStatus === "success" &&
+    sections.some((section) => section.flights.length > 0);
+
+  useEffect(() => {
+    if (!hasResults) return;
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hasResults]);
+
   const isMultiLeg = searchLegs.length > 1;
   const selectedLegFlights = searchLegs
     .map((leg) => leg.selected)
@@ -317,7 +369,7 @@ export function DashboardPage() {
           {user ? `, ${user.firstName}` : ""}
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-4xl">
-          Flight control dashboard
+          My Dashboard
         </h1>
         <p className="mt-2 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
           Track your next departure and book new itineraries across the SkyAir
@@ -362,6 +414,13 @@ export function DashboardPage() {
             status={trackedStatus}
             flight={trackedFlight}
             isAuthenticated={user !== null}
+            tracking={{
+              index: selectedIndex,
+              total: trackable.length,
+              onPrev: () => setTrackedIndex((i) => Math.max(i - 1, 0)),
+              onNext: () =>
+                setTrackedIndex((i) => Math.min(i + 1, trackable.length - 1)),
+            }}
             onFindFlights={focusSearchPanel}
             onSignIn={() => setIsAuthModalOpen(true)}
           />
@@ -395,40 +454,41 @@ export function DashboardPage() {
             isAuthenticated={user !== null}
           />
         </motion.div>
-
       </motion.div>
 
-      <FlightResultsList
-        status={searchStatus}
-        errorMessage={searchError}
-        sections={sections}
-        onSelectFlight={handleSelectFlight}
-        footer={
-          isMultiLeg ? (
-            <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {selectedLegFlights.length} of {searchLegs.length} legs
-                  selected
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {allLegsSelected
-                    ? `Itinerary total ${formatPrice(itineraryTotal * passengerCount)}`
-                    : "Pick a flight for each leg to continue."}
-                </p>
+      <div ref={resultsRef}>
+        <FlightResultsList
+          status={searchStatus}
+          errorMessage={searchError}
+          sections={sections}
+          onSelectFlight={handleSelectFlight}
+          footer={
+            isMultiLeg ? (
+              <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {selectedLegFlights.length} of {searchLegs.length} legs
+                    selected
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {allLegsSelected
+                      ? `Itinerary total ${formatPrice(itineraryTotal * passengerCount)}`
+                      : "Pick a flight for each leg to continue."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={!allLegsSelected}
+                  onClick={() => setBookingFlights(selectedLegFlights)}
+                  className="cursor-pointer rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                >
+                  Book itinerary
+                </button>
               </div>
-              <button
-                type="button"
-                disabled={!allLegsSelected}
-                onClick={() => setBookingFlights(selectedLegFlights)}
-                className="cursor-pointer rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-              >
-                Book itinerary
-              </button>
-            </div>
-          ) : undefined
-        }
-      />
+            ) : undefined
+          }
+        />
+      </div>
 
       {bookingFlights && (
         <BookingModal
