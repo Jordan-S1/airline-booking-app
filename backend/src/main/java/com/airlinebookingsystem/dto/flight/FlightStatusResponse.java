@@ -10,6 +10,11 @@ import java.time.LocalDateTime;
  * comparing "now" against the flight's departure/arrival times — they are not
  * stored. {@code progressPercentage} is 0 before departure and 100 once the
  * flight has arrived.
+ *
+ * <p>{@code departureTime} and {@code arrivalTime} are UTC instants, so the
+ * arithmetic above works on one timeline. The accompanying IANA timezone ids
+ * are what the client renders them in — without those, a Tokyo arrival would
+ * display in the viewer's own zone rather than Tokyo's.
  */
 public record FlightStatusResponse(
         Long id,
@@ -25,6 +30,8 @@ public record FlightStatusResponse(
         BigDecimal arrivalLongitude,
         LocalDateTime departureTime,
         LocalDateTime arrivalTime,
+        String departureTimezone,
+        String arrivalTimezone,
         Integer duration,
         String status,
         Integer progressPercentage,

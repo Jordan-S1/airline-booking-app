@@ -33,8 +33,11 @@ export interface FlightStatusDto {
   arrivalCity: string;
   arrivalLatitude: number | null;
   arrivalLongitude: number | null;
+  /** UTC instant; render via the paired timezone, not the viewer's. */
   departureTime: string;
   arrivalTime: string;
+  departureTimezone: string | null;
+  arrivalTimezone: string | null;
   duration: number;
   status: FlightStatus;
   progressPercentage: number;
@@ -64,8 +67,11 @@ export interface FlightSearchResponseDto {
   arrivalAirport: string;
   departureCity: string;
   arrivalCity: string;
+  /** UTC instant; render via the paired timezone, not the viewer's. */
   departureTime: string;
   arrivalTime: string;
+  departureTimezone: string | null;
+  arrivalTimezone: string | null;
   duration: number;
   price: number;
   availableSeats: number;

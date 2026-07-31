@@ -1,14 +1,8 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 import { useCurrency } from "../lib/currency";
+import { formatLocalTime } from "../lib/datetime";
 import type { FlightSearchResponseDto } from "../types/flight";
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatDuration(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -52,7 +46,7 @@ function FlightResultCard({
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="font-mono text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {formatTime(flight.departureTime)}
+              {formatLocalTime(flight.departureTime, flight.departureTimezone)}
             </p>
             <p className="text-xs text-zinc-400 dark:text-zinc-500">
               {flight.departureAirport}
@@ -66,7 +60,7 @@ function FlightResultCard({
           </div>
           <div>
             <p className="font-mono text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {formatTime(flight.arrivalTime)}
+              {formatLocalTime(flight.arrivalTime, flight.arrivalTimezone)}
             </p>
             <p className="text-xs text-zinc-400 dark:text-zinc-500">
               {flight.arrivalAirport}

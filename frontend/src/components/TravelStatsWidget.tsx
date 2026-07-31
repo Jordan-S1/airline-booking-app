@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Luggage } from "lucide-react";
 import { useCurrency } from "../lib/currency";
+import { parseApiInstant } from "../lib/datetime";
 import type { BookingResponseDto } from "../types/booking";
 
 interface TravelStatsWidgetProps {
@@ -29,7 +30,7 @@ function deriveStats(bookings: BookingResponseDto[]): Stats {
   for (const booking of active) {
     totalSpent += booking.totalAmount;
 
-    if (new Date(booking.arrivalTime).getTime() < now) {
+    if (parseApiInstant(booking.arrivalTime).getTime() < now) {
       tripsTaken += 1;
       // Only count somewhere as "visited" once the flight has actually landed.
       destinationCounts.set(

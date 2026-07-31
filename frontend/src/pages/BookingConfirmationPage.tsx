@@ -3,13 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useCurrency } from "../lib/currency";
+import { formatInZone } from "../lib/datetime";
 import { getBooking } from "../api/bookings";
 import type { BookingResponseDto } from "../types/booking";
 
 type Status = "loading" | "ready" | "error";
 
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
+function formatDateTime(iso: string, timezone: string | null) {
+  return formatInZone(iso, timezone, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -94,7 +95,7 @@ export function BookingConfirmationPage() {
                   {booking.departureAirport}
                 </p>
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  {formatDateTime(booking.departureTime)}
+                  {formatDateTime(booking.departureTime, booking.departureTimezone)}
                 </p>
               </div>
               <span className="font-mono text-sm text-zinc-400 dark:text-zinc-500">
@@ -105,7 +106,7 @@ export function BookingConfirmationPage() {
                   {booking.arrivalAirport}
                 </p>
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  {formatDateTime(booking.arrivalTime)}
+                  {formatDateTime(booking.arrivalTime, booking.arrivalTimezone)}
                 </p>
               </div>
             </div>

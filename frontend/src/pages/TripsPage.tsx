@@ -5,6 +5,7 @@ import { ArrowRight, Plane } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
+import { formatInZone } from "../lib/datetime";
 import { getBookingsByUser, cancelBooking } from "../api/bookings";
 import type { BookingResponseDto } from "../types/booking";
 
@@ -18,8 +19,8 @@ const STATUS_STYLES: Record<string, string> = {
   COMPLETED: "bg-zinc-100 text-zinc-600 dark:bg-white/5 dark:text-zinc-400",
 };
 
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
+function formatDateTime(iso: string, timezone: string | null) {
+  return formatInZone(iso, timezone, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -76,7 +77,7 @@ function BookingCard({
             {booking.departureAirport}
           </p>
           <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-            {formatDateTime(booking.departureTime)}
+            {formatDateTime(booking.departureTime, booking.departureTimezone)}
           </p>
         </div>
         <div className="flex flex-1 items-center gap-2 text-zinc-300 dark:text-zinc-600">
@@ -89,7 +90,7 @@ function BookingCard({
             {booking.arrivalAirport}
           </p>
           <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-            {formatDateTime(booking.arrivalTime)}
+            {formatDateTime(booking.arrivalTime, booking.arrivalTimezone)}
           </p>
         </div>
       </div>

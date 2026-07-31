@@ -31,8 +31,11 @@ export interface BookingResponseDto {
   flightNumber: string;
   departureAirport: string;
   arrivalAirport: string;
+  /** UTC instant; render via the paired timezone, not the viewer's. */
   departureTime: string;
   arrivalTime: string;
+  departureTimezone: string | null;
+  arrivalTimezone: string | null;
   numberOfPassengers: number;
   totalAmount: number;
   status: string;

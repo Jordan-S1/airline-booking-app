@@ -20,6 +20,7 @@ import {
 import { getBookingsByUser } from "../api/bookings";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
+import { parseApiInstant } from "../lib/datetime";
 import type {
   FlightSearchResponseDto,
   FlightStatusDto,
@@ -114,16 +115,16 @@ export function DashboardPage() {
 
       const now = Date.now();
       const upcoming = active
-        .filter((b) => new Date(b.arrivalTime).getTime() >= now)
+        .filter((b) => parseApiInstant(b.arrivalTime).getTime() >= now)
         .sort(
           (a, b) =>
-            new Date(a.departureTime).getTime() -
-            new Date(b.departureTime).getTime(),
+            parseApiInstant(a.departureTime).getTime() -
+            parseApiInstant(b.departureTime).getTime(),
         );
       const mostRecent = [...active].sort(
         (a, b) =>
-          new Date(b.departureTime).getTime() -
-          new Date(a.departureTime).getTime(),
+          parseApiInstant(b.departureTime).getTime() -
+          parseApiInstant(a.departureTime).getTime(),
       );
       const target = upcoming[0] ?? mostRecent[0];
 

@@ -1,6 +1,11 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Plane } from "lucide-react";
 import { RouteMap } from "./RouteMap";
+import {
+  formatLocalDate,
+  formatLocalTime,
+  formatZoneAbbreviation,
+} from "../lib/datetime";
 import type { FlightStatus, FlightStatusDto } from "../types/flight";
 
 const STATUS_STYLES: Record<FlightStatus, string> = {
@@ -25,21 +30,6 @@ const STATUS_LABELS: Record<FlightStatus, string> = {
   DELAYED: "Delayed",
   CANCELLED: "Cancelled",
 };
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 function formatDuration(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -143,6 +133,14 @@ export function FlightStatusWidget({
 
   const isLive = flight.status === "IN_AIR";
   const progress = Math.min(100, Math.max(0, flight.progressPercentage));
+  const departureZoneLabel = formatZoneAbbreviation(
+    flight.departureTime,
+    flight.departureTimezone,
+  );
+  const arrivalZoneLabel = formatZoneAbbreviation(
+    flight.arrivalTime,
+    flight.arrivalTimezone,
+  );
 
   return (
     <Shell>
@@ -158,7 +156,7 @@ export function FlightStatusWidget({
           </div>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             {flight.aircraft ?? "Aircraft TBC"} ·{" "}
-            {formatDate(flight.departureTime)}
+            {formatLocalDate(flight.departureTime, flight.departureTimezone)}
           </p>
         </div>
 
@@ -216,21 +214,26 @@ export function FlightStatusWidget({
         </div>
       )}
 
+      {/* Each end is shown in its own local time, with the offset spelled out —
+          on a long-haul leg the two are hours apart and an unlabelled pair of
+          times reads as a much shorter flight than it is. */}
       <div className="mb-6 flex items-center justify-between text-sm">
         <div>
           <p className="font-medium text-zinc-900 dark:text-zinc-100">
-            {formatTime(flight.departureTime)}
+            {formatLocalTime(flight.departureTime, flight.departureTimezone)}
           </p>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
             {flight.departureCity}
+            {departureZoneLabel && ` · ${departureZoneLabel}`}
           </p>
         </div>
         <div className="text-right">
           <p className="font-medium text-zinc-900 dark:text-zinc-100">
-            {formatTime(flight.arrivalTime)}
+            {formatLocalTime(flight.arrivalTime, flight.arrivalTimezone)}
           </p>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
             {flight.arrivalCity}
+            {arrivalZoneLabel && ` · ${arrivalZoneLabel}`}
           </p>
         </div>
       </div>

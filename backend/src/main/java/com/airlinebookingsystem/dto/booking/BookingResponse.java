@@ -12,6 +12,8 @@ public record BookingResponse(
         String arrivalAirport,
         LocalDateTime departureTime,
         LocalDateTime arrivalTime,
+        String departureTimezone,
+        String arrivalTimezone,
         Integer numberOfPassengers,
         BigDecimal totalAmount,
         String status,

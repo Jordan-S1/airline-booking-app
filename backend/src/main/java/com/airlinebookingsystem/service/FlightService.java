@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,7 +66,7 @@ public class FlightService {
             return Optional.empty();
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         return instances.stream()
                 .filter(f -> f.getDepartureTime().isAfter(now))
                 .findFirst()
@@ -97,7 +98,7 @@ public class FlightService {
 
     @Transactional(readOnly = true)
     public List<FlightSearchResponse> getUpcomingFlights() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         log.info("Fetching upcoming flights after: {}", now);
         return flightRepository.findUpcomingFlights(now).stream()
                 .map(flight -> mapToFlightSearchResponse(flight, "ALL"))
@@ -123,7 +124,7 @@ public class FlightService {
         String normalizedCode = airportCode.toUpperCase();
         log.info("Fetching upcoming arrivals at: {}", normalizedCode);
 
-        return flightRepository.findUpcomingArrivals(normalizedCode, LocalDateTime.now())
+        return flightRepository.findUpcomingArrivals(normalizedCode, LocalDateTime.now(ZoneOffset.UTC))
                 .stream()
                 .map(flight -> mapToFlightSearchResponse(flight, "ALL"))
                 .collect(Collectors.toList());
@@ -349,7 +350,7 @@ public class FlightService {
     private static final int BOARDING_WINDOW_MINUTES = 45;
 
     private FlightStatusResponse mapToFlightStatusResponse(Flight flight) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String status = deriveStatus(flight, now);
         int progress = "CANCELLED".equals(status) ? 0 : deriveProgress(flight, now);
 
@@ -367,6 +368,8 @@ public class FlightService {
                 flight.getArrivalAirport().getLongitude(),
                 flight.getDepartureTime(),
                 flight.getArrivalTime(),
+                flight.getDepartureAirport().getTimezone(),
+                flight.getArrivalAirport().getTimezone(),
                 flight.getDuration(),
                 status,
                 progress,
@@ -428,6 +431,8 @@ public class FlightService {
                 flight.getArrivalAirport().getCity(),
                 flight.getDepartureTime(),
                 flight.getArrivalTime(),
+                flight.getDepartureAirport().getTimezone(),
+                flight.getArrivalAirport().getTimezone(),
                 flight.getDuration(),
                 getPriceForSeatClass(flight, seatClass),
                 availableSeats,

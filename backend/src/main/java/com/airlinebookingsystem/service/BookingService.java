@@ -280,6 +280,8 @@ public class BookingService {
                 booking.getFlight().getArrivalAirport().getCode(),
                 booking.getFlight().getDepartureTime(),
                 booking.getFlight().getArrivalTime(),
+                booking.getFlight().getDepartureAirport().getTimezone(),
+                booking.getFlight().getArrivalAirport().getTimezone(),
                 booking.getNumberOfPassengers(),
                 booking.getTotalAmount(),
                 booking.getStatus().name(),
