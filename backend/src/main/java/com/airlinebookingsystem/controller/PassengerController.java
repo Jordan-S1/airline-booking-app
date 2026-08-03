@@ -21,7 +21,6 @@ import java.util.List;
  * REST controller for passenger operations.
  * Role access rules:
  *   ADMIN        — full access to all endpoints
- *   AIRLINE_STAFF — can view passengers by booking, flight, count. Cannot modify.
  *   CUSTOMER     — can only manage passengers on their own bookings
 
  * Sensitive endpoints (all passengers, by passport) are ADMIN only
@@ -47,13 +46,13 @@ public class PassengerController {
     }
 
     @Operation(summary = "Get passenger by ID",
-            description = "ADMIN or AIRLINE_STAFF only")
+            description = "ADMIN only")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Passenger found"),
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Passenger not found")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<PassengerResponse> getPassengerById(
             @Parameter(description = "Passenger ID") @PathVariable Long id) {
@@ -62,13 +61,13 @@ public class PassengerController {
     }
 
     @Operation(summary = "Get all passengers for a booking",
-            description = "ADMIN and AIRLINE_STAFF can view any booking's passengers. CUSTOMER can only view their own booking's passengers — enforced at service level.")
+            description = "ADMIN can view any booking's passengers. CUSTOMER can only view their own booking's passengers — enforced at service level.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Passengers returned"),
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Booking not found")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<List<PassengerResponse>> getPassengersByBookingId(
             @Parameter(description = "Booking ID") @PathVariable Long bookingId) {
@@ -77,12 +76,12 @@ public class PassengerController {
     }
 
     @Operation(summary = "Get all passengers on a flight",
-            description = "ADMIN and AIRLINE_STAFF only — flight manifest")
+            description = "ADMIN only — flight manifest")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Passengers returned"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/flight/{flightId}")
     public ResponseEntity<List<PassengerResponse>> getPassengersByFlightId(
             @Parameter(description = "Flight ID") @PathVariable Long flightId) {
@@ -105,8 +104,8 @@ public class PassengerController {
     }
 
     @Operation(summary = "Get passenger count for a booking",
-            description = "ADMIN, AIRLINE_STAFF, and CUSTOMER (own bookings only)")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+            description = "ADMIN and CUSTOMER (own bookings only)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/booking/{bookingId}/count")
     public ResponseEntity<Long> getPassengerCountByBooking(
             @Parameter(description = "Booking ID") @PathVariable Long bookingId) {
@@ -123,7 +122,7 @@ public class PassengerController {
             @ApiResponse(responseCode = "404", description = "Booking not found"),
             @ApiResponse(responseCode = "409", description = "Duplicate passport number or seat already assigned")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @PostMapping("/booking/{bookingId}")
     public ResponseEntity<PassengerResponse> addPassengerToBooking(
             @Parameter(description = "Booking ID") @PathVariable Long bookingId,
@@ -151,14 +150,14 @@ public class PassengerController {
     }
 
     @Operation(summary = "Assign a seat to a passenger",
-            description = "ADMIN, AIRLINE_STAFF, and CUSTOMER (own bookings only). Seat number format: row + letter e.g. 14A, 2C")
+            description = "ADMIN and CUSTOMER (own bookings only). Seat number format: row + letter e.g. 14A, 2C")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Seat assigned"),
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Passenger not found"),
             @ApiResponse(responseCode = "409", description = "Seat already assigned to another passenger")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @PatchMapping("/{id}/seat")
     public ResponseEntity<PassengerResponse> assignSeat(
             @Parameter(description = "Passenger ID") @PathVariable Long id,

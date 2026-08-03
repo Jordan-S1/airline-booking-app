@@ -73,13 +73,13 @@ public class AirportController {
     }
 
     @Operation(summary = "Create a new airport",
-            description = "ADMIN or AIRLINE_STAFF only")
+            description = "ADMIN only")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Airport created"),
             @ApiResponse(responseCode = "400", description = "Validation failed"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<AirportResponse> createAirport(@Valid @RequestBody AirportRequest request) {
         log.info("POST /airports — code: {}", request.code());

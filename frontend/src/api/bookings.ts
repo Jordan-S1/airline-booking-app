@@ -30,6 +30,19 @@ export async function getBookingsByUser(
   return data;
 }
 
+/**
+ * Admin only — every booking in the system with the given status, across all
+ * customers. Non-admin tokens are rejected server-side with 403.
+ */
+export async function getBookingsByStatus(
+  status: string,
+): Promise<BookingResponseDto[]> {
+  const { data } = await apiClient.get<BookingResponseDto[]>(
+    `/bookings/status/${status}`,
+  );
+  return data;
+}
+
 export async function getBooking(
   bookingReference: string,
 ): Promise<BookingResponseDto> {

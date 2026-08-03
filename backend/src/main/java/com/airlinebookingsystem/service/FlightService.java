@@ -1,5 +1,6 @@
 package com.airlinebookingsystem.service;
 
+import com.airlinebookingsystem.dto.common.PagedResponse;
 import com.airlinebookingsystem.dto.flight.*;
 import com.airlinebookingsystem.entity.Airport;
 import com.airlinebookingsystem.entity.Airline;
@@ -13,6 +14,9 @@ import com.airlinebookingsystem.repository.FlightRepository;
 import com.airlinebookingsystem.util.SeatClassUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,14 +40,6 @@ public class FlightService {
     private final FlightRepository flightRepository;
     private final AirportRepository airportRepository;
     private final AirlineRepository airlineRepository;
-
-    @Transactional(readOnly = true)
-    public List<FlightResponse> getAllFlights() {
-        log.info("Fetching all flights");
-        return flightRepository.findAll().stream()
-                .map(this::mapToFlightResponse)
-                .collect(Collectors.toList());
-    }
 
     @Transactional(readOnly = true)
     public Optional<FlightResponse> getFlightById(@NonNull Long id) {
@@ -410,6 +406,30 @@ public class FlightService {
 
         long elapsedSeconds = ChronoUnit.SECONDS.between(departure, now);
         return (int) Math.round((elapsedSeconds * 100.0) / totalSeconds);
+    }
+
+    /** Largest page the API will serve, so a bad `size` cannot ask for everything. */
+    private static final int MAX_PAGE_SIZE = 100;
+
+    /**
+     * A page of flights for the admin listing, newest departures first.
+     *
+     * <p>The alternative — returning all of them and slicing in the browser —
+     * moves several thousand rows over the wire to render forty, and gets worse
+     * every time the timetable grows.
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<FlightResponse> searchFlightsPaged(String search, int page, int size) {
+        String term = search == null ? "" : search.trim();
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+
+        Pageable pageable = PageRequest.of(
+                safePage, safeSize, Sort.by(Sort.Direction.DESC, "departureTime"));
+
+        log.info("Paged flight search — term '{}', page {}, size {}", term, safePage, safeSize);
+        return PagedResponse.from(
+                flightRepository.searchPaged(term, pageable), this::mapToFlightResponse);
     }
 
     private FlightSearchResponse mapToFlightSearchResponse(Flight flight, String seatClass) {

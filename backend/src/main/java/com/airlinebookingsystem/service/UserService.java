@@ -53,7 +53,8 @@ public class UserService implements UserDetailsService {
                     .map(this::mapToUserResponse)
                     .collect(Collectors.toList());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid role: " + role + ". Valid roles: CUSTOMER, ADMIN, AIRLINE_STAFF");
+            throw new IllegalArgumentException(
+                    "Invalid role: " + role + ". Valid roles: CUSTOMER, ADMIN");
         }
     }
 

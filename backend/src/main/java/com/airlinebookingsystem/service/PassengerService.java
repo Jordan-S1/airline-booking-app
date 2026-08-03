@@ -444,8 +444,7 @@ public class PassengerService {
         if (auth == null) return;
 
         boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
-                        a.getAuthority().equals("ROLE_AIRLINE_STAFF"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (isAdmin) return;
 
         String currentUserEmail = auth.getName();

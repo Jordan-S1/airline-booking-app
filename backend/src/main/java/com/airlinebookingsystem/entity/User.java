@@ -98,7 +98,7 @@ public class User implements UserDetails {
     private String preferredCurrency = "EUR";
 
     /**
-     * User's role in the system (CUSTOMER, ADMIN, or AIRLINE_STAFF).
+     * User's role in the system (CUSTOMER or ADMIN).
      */
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -210,9 +210,8 @@ public class User implements UserDetails {
      * Defines the possible roles a user can have in the system.
      * CUSTOMER: Regular user who can book flights
      * ADMIN: System administrator with full access
-     * AIRLINE_STAFF: Airline employee with specific privileges
      */
     public enum Role {
-        CUSTOMER, ADMIN, AIRLINE_STAFF
+        CUSTOMER, ADMIN
     }
 }

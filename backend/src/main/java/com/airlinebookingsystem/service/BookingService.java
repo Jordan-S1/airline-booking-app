@@ -232,15 +232,14 @@ public class BookingService {
 
     /**
      * Validates that the current user owns the booking.
-     * ADMIN and AIRLINE_STAFF bypass this check.
+     * ADMIN bypasses this check.
      */
     private void validateBookingOwnership(Booking booking) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return;
 
         boolean isPrivileged = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
-                        a.getAuthority().equals("ROLE_AIRLINE_STAFF"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (isPrivileged) return;
 
         String currentUserEmail = auth.getName();

@@ -24,7 +24,6 @@ import java.util.List;
  * REST controller for payment operations.
  * Role access rules:
  *   ADMIN        — full access to all endpoints
- *   AIRLINE_STAFF — read-only: view payments by transaction, booking, status, date range
  *   CUSTOMER     — can only process payment and refund for their own bookings
  */
 @RestController
@@ -55,13 +54,13 @@ public class PaymentController {
     }
 
     @Operation(summary = "Get payment by transaction ID",
-            description = "ADMIN and AIRLINE_STAFF only")
+            description = "ADMIN only")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Payment found"),
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/transaction/{transactionId}")
     public ResponseEntity<PaymentResponse> getPaymentByTransactionId(
             @Parameter(description = "Transaction ID") @PathVariable String transactionId) {
@@ -70,13 +69,13 @@ public class PaymentController {
     }
 
     @Operation(summary = "Get payment for a booking",
-            description = "ADMIN and AIRLINE_STAFF can see any booking's payment. CUSTOMER can only see their own.")
+            description = "ADMIN can see any booking's payment. CUSTOMER can only see their own.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Payment found"),
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Payment not found for this booking")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<PaymentResponse> getPaymentByBookingId(
             @Parameter(description = "Booking ID") @PathVariable Long bookingId) {

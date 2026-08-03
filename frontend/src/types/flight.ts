@@ -46,6 +46,60 @@ export interface FlightStatusDto {
   aircraft: string | null;
 }
 
+/**
+ * Mirrors com.airlinebookingsystem.dto.flight.FlightRequest.
+ *
+ * Times are UTC instants, as everywhere else. The service derives `duration`
+ * from the gap between them, so both must sit on the same timeline — sending
+ * each end as its own local wall-clock time would produce a duration wrong by
+ * the offset between the two airports.
+ */
+export interface FlightRequestDto {
+  flightNumber: string;
+  airlineCode: string;
+  departureAirportCode: string;
+  arrivalAirportCode: string;
+  departureTime: string;
+  arrivalTime: string;
+  economySeats: number;
+  businessSeats: number;
+  firstClassSeats: number;
+  economyPrice: number;
+  businessPrice: number | null;
+  firstClassPrice: number | null;
+  aircraft: string | null;
+  status: FlightStatus | null;
+}
+
+/** Mirrors com.airlinebookingsystem.dto.flight.FlightResponse. */
+export interface FlightResponseDto {
+  id: number;
+  flightNumber: string;
+  airlineCode: string;
+  airlineName: string;
+  departureAirportCode: string;
+  departureCity: string;
+  arrivalAirportCode: string;
+  arrivalCity: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: number;
+  totalSeats: number;
+  availableSeats: number;
+  economySeats: number;
+  businessSeats: number;
+  firstClassSeats: number;
+  basePrice: number;
+  economyPrice: number;
+  businessPrice: number;
+  firstClassPrice: number;
+  status: FlightStatus;
+  active: boolean;
+  aircraft: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Mirrors com.airlinebookingsystem.dto.flight.FlightSearchRequest. */
 export interface FlightSearchRequestDto {
   departureAirport: string;

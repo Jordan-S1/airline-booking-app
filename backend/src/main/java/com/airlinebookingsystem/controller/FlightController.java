@@ -1,5 +1,6 @@
 package com.airlinebookingsystem.controller;
 
+import com.airlinebookingsystem.dto.common.PagedResponse;
 import com.airlinebookingsystem.dto.flight.*;
 import com.airlinebookingsystem.exception.ResourceNotFoundException;
 import com.airlinebookingsystem.service.FlightService;
@@ -30,12 +31,31 @@ public class FlightController {
 
     private final FlightService flightService;
 
-    @Operation(summary = "Get all flights")
+    /**
+     * The flights collection, always a page.
+     *
+     * <p>There is deliberately no unpaged variant. This returned every flight
+     * until the timetable reached several thousand rows, at which point one
+     * anonymous request meant a 2 MB response and — the airline and both
+     * airports being lazy — roughly eleven thousand queries to build it. A
+     * collection endpoint that gets slower every day the schedule rolls forward
+     * is not one worth keeping alongside this.
+     */
+    @Operation(summary = "Get a page of flights",
+            description = "Free-text search across flight number, either airport code and "
+                    + "airline name, newest departures first. An empty search matches "
+                    + "everything. Page size is capped server-side.")
     @SecurityRequirements
     @GetMapping
-    public ResponseEntity<List<FlightResponse>> getAllFlights() {
-        log.info("GET /flights");
-        return ResponseEntity.ok(flightService.getAllFlights());
+    public ResponseEntity<PagedResponse<FlightResponse>> getFlights(
+            @Parameter(description = "Free-text term; blank matches all")
+            @RequestParam(defaultValue = "") String search,
+            @Parameter(description = "Zero-based page index")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Rows per page, capped at 100")
+            @RequestParam(defaultValue = "40") int size) {
+        log.info("GET /flights — search '{}', page {}, size {}", search, page, size);
+        return ResponseEntity.ok(flightService.searchFlightsPaged(search, page, size));
     }
 
     @Operation(summary = "Get flight by ID")
@@ -145,7 +165,7 @@ public class FlightController {
             @ApiResponse(responseCode = "404", description = "Airline or airport not found"),
             @ApiResponse(responseCode = "409", description = "Flight number already exists")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<FlightResponse> createFlight(@Valid @RequestBody FlightRequest request) {
         log.info("POST /flights — number: {}", request.flightNumber());
@@ -157,7 +177,7 @@ public class FlightController {
             @ApiResponse(responseCode = "200", description = "Flight updated"),
             @ApiResponse(responseCode = "404", description = "Flight or airport not found")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<FlightResponse> updateFlight(
             @PathVariable Long id,

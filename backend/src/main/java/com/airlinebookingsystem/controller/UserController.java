@@ -22,7 +22,6 @@ import java.util.List;
  * REST controller for user management.
  * Role access rules:
  *   ADMIN  — full access to all endpoints
- *   AIRLINE_STAFF — read-only access to user list
  *   CUSTOMER — can only view and update their own profile
  */
 @RestController
@@ -35,16 +34,16 @@ public class UserController {
 
     private final UserService userService;
 
-    @Operation(summary = "Get all users", description = "ADMIN and AIRLINE_STAFF only")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @Operation(summary = "Get all users", description = "ADMIN only")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         log.info("GET /users");
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @Operation(summary = "Get all active users", description = "ADMIN and AIRLINE_STAFF only")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF')")
+    @Operation(summary = "Get all active users", description = "ADMIN only")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/active")
     public ResponseEntity<List<UserResponse>> getActiveUsers() {
         log.info("GET /users/active");
@@ -55,7 +54,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/role/{role}")
     public ResponseEntity<List<UserResponse>> getUsersByRole(
-            @Parameter(description = "Role: CUSTOMER, ADMIN, AIRLINE_STAFF")
+            @Parameter(description = "Role: CUSTOMER, ADMIN")
             @PathVariable String role) {
         log.info("GET /users/role/{}", role);
         return ResponseEntity.ok(userService.getUsersByRole(role));

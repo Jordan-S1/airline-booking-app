@@ -24,7 +24,6 @@ import java.util.List;
  * REST controller for booking operations.
  * Role access rules:
  *   ADMIN  — full access to all endpoints
- *   AIRLINE_STAFF — read-only access to bookings
  *   CUSTOMER — can only manage their own bookings (enforced at service level)
  * Booking flow:
  *   1. POST /bookings/user/{userId}       — create booking (passengers optional)
@@ -68,7 +67,7 @@ public class BookingController {
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Booking not found")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/{bookingReference}")
     public ResponseEntity<BookingResponse> getBookingByReference(
             @Parameter(description = "Booking reference e.g. BK17234567890001")
@@ -84,7 +83,7 @@ public class BookingController {
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<BookingResponse>> getBookingsByUserId(
             @Parameter(description = "User ID") @PathVariable Long userId) {
@@ -103,7 +102,7 @@ public class BookingController {
     }
 
     @Operation(summary = "Get passengers for a booking")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AIRLINE_STAFF', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/{bookingReference}/passengers")
     public ResponseEntity<List<PassengerResponse>> getBookingPassengers(
             @PathVariable String bookingReference) {

@@ -2,6 +2,8 @@ package com.airlinebookingsystem.repository;
 
 import com.airlinebookingsystem.entity.Flight;
 import com.airlinebookingsystem.entity.Airport;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +18,35 @@ import java.util.List;
  */
 @Repository
 public interface FlightRepository extends JpaRepository<Flight, Long> {
+
+    /**
+     * One page of flights matching a free-text term across flight number,
+     * either airport code, and airline name.
+     *
+     * <p>An empty term matches everything, which keeps the unfiltered listing on
+     * the same query rather than needing a second one. The joins are spelled out
+     * so the derived count query does not have to guess at them, and are fetched
+     * eagerly because the response DTO reads the airline and both airports for
+     * every row — left implicit, this is a textbook N+1.
+     */
+    @Query(value = """
+            SELECT f FROM Flight f
+            JOIN FETCH f.airline al
+            JOIN FETCH f.departureAirport dep
+            JOIN FETCH f.arrivalAirport arr
+            WHERE LOWER(f.flightNumber) LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(dep.code)       LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(arr.code)       LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(al.name)        LIKE LOWER(CONCAT('%', :search, '%'))
+            """,
+            countQuery = """
+            SELECT COUNT(f) FROM Flight f
+            WHERE LOWER(f.flightNumber) LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(f.departureAirport.code) LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(f.arrivalAirport.code)   LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(f.airline.name)          LIKE LOWER(CONCAT('%', :search, '%'))
+            """)
+    Page<Flight> searchPaged(@Param("search") String search, Pageable pageable);
 
     /**
      * Finds every dated instance of a flight number, earliest first.

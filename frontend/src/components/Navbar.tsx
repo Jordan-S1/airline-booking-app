@@ -3,21 +3,29 @@ import { Link, NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "./ThemeToggle";
 import { AuthModal } from "./AuthModal";
-import { useAuth } from "../lib/auth";
+import { isAdmin, useAuth } from "../lib/auth";
 
-const NAV_LINKS: { label: string; to: string; protected?: boolean }[] = [
+const NAV_LINKS: {
+  label: string;
+  to: string;
+  protected?: boolean;
+  adminOnly?: boolean;
+}[] = [
   { label: "Dashboard", to: "/dashboard" },
   { label: "Explore", to: "/explore" },
   { label: "Trips", to: "/trips", protected: true },
+  { label: "Admin", to: "/admin", adminOnly: true },
 ];
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  const visibleLinks = NAV_LINKS.filter(
-    (link) => !link.protected || isAuthenticated,
-  );
+  const userIsAdmin = isAdmin(user);
+  const visibleLinks = NAV_LINKS.filter((link) => {
+    if (link.adminOnly) return userIsAdmin;
+    return !link.protected || isAuthenticated;
+  });
 
   return (
     <>

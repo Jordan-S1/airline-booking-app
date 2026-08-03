@@ -63,6 +63,8 @@ public class AirportService {
                 .country(request.country())
                 .countryCode(normaliseCountryCode(request.countryCode()))
                 .timezone(request.timezone())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
                 .build();
 
         log.info("Saving airport with code: {}", airport.getCode());
@@ -80,6 +82,10 @@ public class AirportService {
         airport.setCountry(request.country());
         if (request.countryCode() != null) airport.setCountryCode(normaliseCountryCode(request.countryCode()));
         if (request.timezone() != null) airport.setTimezone(request.timezone());
+        // Null means "leave as is" here, matching the fields above — an update
+        // that omits coordinates should not wipe a position already recorded.
+        if (request.latitude() != null) airport.setLatitude(request.latitude());
+        if (request.longitude() != null) airport.setLongitude(request.longitude());
 
         log.info("Updated airport: {}", airport.getCode());
         return mapToResponse(airportRepository.save(airport));

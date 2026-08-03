@@ -29,3 +29,15 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
 }
+
+/**
+ * Whether the signed-in user holds the ADMIN role.
+ *
+ * This decides what the UI offers, not what it permits — every admin endpoint
+ * is guarded server-side with `@PreAuthorize`, and a token that isn't an
+ * admin's is rejected there regardless of what the browser chooses to render.
+ * Treat this as a way to avoid showing people doors they cannot open.
+ */
+export function isAdmin(user: AuthUser | null): boolean {
+  return user?.role?.toUpperCase() === "ADMIN";
+}

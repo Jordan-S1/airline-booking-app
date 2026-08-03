@@ -66,6 +66,57 @@ export function formatLocalDateTime(iso: string, timezone: string | null | undef
   });
 }
 
+/**
+ * Converts a wall-clock value from a `datetime-local` input, read as time at
+ * `timezone`, into the UTC instant the API stores.
+ *
+ * Works by pretending the string is already UTC, asking what that instant looks
+ * like in the target zone, and subtracting the difference. Accurate to the
+ * minute except within the hour a zone shifts for daylight saving, where the
+ * wall-clock time is genuinely ambiguous anyway.
+ */
+export function localInputToUtc(
+  localValue: string,
+  timezone: string | null | undefined,
+): string {
+  const naive = new Date(`${localValue}:00Z`);
+  if (Number.isNaN(naive.getTime())) return localValue;
+  if (!timezone) return localValue.length === 16 ? `${localValue}:00` : localValue;
+
+  try {
+    const inZone = new Date(naive.toLocaleString("en-US", { timeZone: timezone }));
+    const inUtc = new Date(naive.toLocaleString("en-US", { timeZone: "UTC" }));
+    const utc = new Date(naive.getTime() - (inZone.getTime() - inUtc.getTime()));
+    return utc.toISOString().slice(0, 19);
+  } catch {
+    return localValue.length === 16 ? `${localValue}:00` : localValue;
+  }
+}
+
+/** The reverse: a stored UTC instant as a `datetime-local` value in `timezone`. */
+export function utcToLocalInput(
+  iso: string,
+  timezone: string | null | undefined,
+): string {
+  const date = parseApiInstant(iso);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone ?? undefined,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  // en-CA renders hour 24 for midnight in some engines; normalise it.
+  const hour = get("hour") === "24" ? "00" : get("hour");
+  return `${get("year")}-${get("month")}-${get("day")}T${hour}:${get("minute")}`;
+}
+
 /** The local calendar date at a given zone, as YYYY-MM-DD. */
 function localDateKey(iso: string, timezone: string | null | undefined): string {
   return formatInZone(iso, timezone, {
