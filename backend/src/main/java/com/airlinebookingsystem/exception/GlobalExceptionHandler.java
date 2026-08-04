@@ -132,9 +132,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        String expectedType = ex.getRequiredType() == null
+        // Read the type once: the null check and the dereference have to be
+        // talking about the same value for either to mean anything.
+        Class<?> requiredType = ex.getRequiredType();
+        String expectedType = requiredType == null
                 ? "the expected type"
-                : ex.getRequiredType().getSimpleName();
+                : requiredType.getSimpleName();
         String message = "Parameter '%s' must be %s".formatted(ex.getName(), expectedType);
 
         log.warn("Type mismatch at {}: {}", request.getRequestURI(), message);

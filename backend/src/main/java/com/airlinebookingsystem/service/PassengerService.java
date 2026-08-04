@@ -7,8 +7,6 @@ import com.airlinebookingsystem.entity.Passenger;
 import com.airlinebookingsystem.repository.BookingRepository;
 import com.airlinebookingsystem.repository.FlightRepository;
 import com.airlinebookingsystem.repository.PassengerRepository;
-import com.airlinebookingsystem.repository.UserRepository;
-import com.airlinebookingsystem.entity.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.airlinebookingsystem.util.SeatClassUtils;
@@ -46,7 +44,6 @@ public class PassengerService {
     private final PassengerRepository passengerRepository;
     private final BookingRepository bookingRepository;
     private final FlightRepository flightRepository;
-    private final UserRepository userRepository;
 
     /**
      * Creates a new passenger record associated with a booking.

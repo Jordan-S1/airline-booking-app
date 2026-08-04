@@ -202,7 +202,10 @@ public class FlightScheduleService {
      * considered at all.
      */
     private ZoneId zoneOf(Airport airport) {
-        String timezone = airport == null ? null : airport.getTimezone();
+        if (airport == null) {
+            return ZoneOffset.UTC;
+        }
+        String timezone = airport.getTimezone();
         if (timezone == null || timezone.isBlank()) {
             return ZoneOffset.UTC;
         }
