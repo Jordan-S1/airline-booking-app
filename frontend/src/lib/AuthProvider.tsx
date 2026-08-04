@@ -1,5 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import * as authApi from "../api/auth";
+import { setSessionExpiredHandler } from "./apiClient";
 import { setAuthToken } from "./authToken";
 import {
   AuthContext,
@@ -21,6 +22,17 @@ function readStoredUser(): AuthUser | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStoredUser);
+
+  // The api client clears the token itself when the server rejects it; this
+  // keeps the stored profile and the rendered UI from outlasting it. Without
+  // it the app stays looking signed in while every request 401s.
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      setUser(null);
+    });
+    return () => setSessionExpiredHandler(null);
+  }, []);
 
   const applyAuthResponse = (response: AuthResponseDto) => {
     const nextUser: AuthUser = {

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -17,8 +18,16 @@ import org.springframework.stereotype.Component;
  * The app will refuse to start if either variable is missing.
  * Set these in your .env file for local dev and in your platform's
  * secret manager for production.
+ *
+ * <p>Excluded from the test profile. ApplicationRunner beans do execute under
+ * {@code @SpringBootTest}, and a test database starts empty, so the existing
+ * admin check below would not short-circuit — the seeder would demand
+ * ADMIN_EMAIL and ADMIN_PASSWORD from the real environment, which Spring
+ * properties cannot supply because they are read via System.getenv. Tests
+ * should not be minting admin accounts in any case.
  */
 @Component
+@Profile("!test")
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements ApplicationRunner {

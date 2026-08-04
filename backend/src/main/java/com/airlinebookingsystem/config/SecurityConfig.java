@@ -18,6 +18,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import com.airlinebookingsystem.security.RestAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -52,12 +53,15 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
     // @Lazy on JwtAuthFilter breaks the circular dependency cycle
-    public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter, UserService userService, PasswordEncoder passwordEncoder) {
+    public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter, UserService userService, PasswordEncoder passwordEncoder,
+                          RestAuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
@@ -87,6 +91,9 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                // Without this an unauthenticated request returns 403, which a
+                // client cannot tell apart from a genuine permission denial.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -28,63 +28,63 @@ import java.util.Objects;
 @Transactional
 public class AuthService {
 
-        private final UserRepository userRepository;
-        private final PasswordEncoder passwordEncoder;
-        private final JwtService jwtService;
-        private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
-        public AuthResponse register(RegisterRequest request) {
-                log.info("Registering new user: {}", request.getEmail());
+    public AuthResponse register(RegisterRequest request) {
+        log.info("Registering new user: {}", request.getEmail());
 
-                if (userRepository.existsByEmail(request.getEmail())) {
-                        throw new DuplicateResourceException("Email", request.getEmail());
-                }
-
-                User user = User.builder()
-                                .firstName(request.getFirstName())
-                                .lastName(request.getLastName())
-                                .email(request.getEmail())
-                                .password(passwordEncoder.encode(request.getPassword()))
-                                .phoneNumber(request.getPhoneNumber())
-                                .role(User.Role.CUSTOMER)
-                                .build();
-
-                user = userRepository.save(Objects.requireNonNull(user));
-                log.info("User registered successfully: {}", user.getEmail());
-
-                String token = jwtService.generateToken(
-                                Map.of("role", user.getRole().name(), "userId", user.getId()),
-                                user);
-
-                return buildAuthResponse(user, token);
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException("Email", request.getEmail());
         }
 
-        public AuthResponse login(LoginRequest request) {
-                log.info("Login attempt for: {}", request.getEmail());
+        User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getPhoneNumber())
+                .role(User.Role.CUSTOMER)
+                .build();
 
-                authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        user = userRepository.save(Objects.requireNonNull(user));
+        log.info("User registered successfully: {}", user.getEmail());
 
-                User user = userRepository.findByEmail(request.getEmail())
-                                .orElseThrow(() -> new ResourceNotFoundException("User", request.getEmail()));
+        String token = jwtService.generateToken(
+                Map.of("role", user.getRole().name(), "userId", user.getId()),
+                user);
 
-                String token = jwtService.generateToken(
-                                Map.of("role", user.getRole().name(), "userId", user.getId()),
-                                user);
+        return buildAuthResponse(user, token);
+    }
 
-                log.info("Login successful: {}", user.getEmail());
-                return buildAuthResponse(user, token);
-        }
+    public AuthResponse login(LoginRequest request) {
+        log.info("Login attempt for: {}", request.getEmail());
 
-        private AuthResponse buildAuthResponse(User user, String token) {
-                return AuthResponse.builder()
-                                .token(token)
-                                .email(user.getEmail())
-                                .firstName(user.getFirstName())
-                                .lastName(user.getLastName())
-                                .role(user.getRole().name())
-                                .userId(user.getId())
-                                .preferredCurrency(user.getPreferredCurrency())
-                                .build();
-        }
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User", request.getEmail()));
+
+        String token = jwtService.generateToken(
+                Map.of("role", user.getRole().name(), "userId", user.getId()),
+                user);
+
+        log.info("Login successful: {}", user.getEmail());
+        return buildAuthResponse(user, token);
+    }
+
+    private AuthResponse buildAuthResponse(User user, String token) {
+        return AuthResponse.builder()
+                .token(token)
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole().name())
+                .userId(user.getId())
+                .preferredCurrency(user.getPreferredCurrency())
+                .build();
+    }
 }

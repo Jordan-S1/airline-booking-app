@@ -1,0 +1,24 @@
+# Test profile.
+#
+# The datasource is deliberately absent: ApplicationTests starts a Postgres
+# container and @ServiceConnection supplies the url, username and password
+# from it. Everything below exists because application.yml declares these
+# placeholders with no default, so the context would fail to resolve them.
+
+jwt:
+  # Test-only signing key. Not a secret — it never leaves the test JVM, and
+  # the production value still comes from the JWT_SECRET environment variable.
+  # Must stay long enough for HMAC-SHA256, which needs at least 256 bits.
+  secret: PE5l8hGKvukVMXIzFt2xAdPfU+aXDI12/7mkeCRxNno=
+  expiration: 86400000
+
+flights:
+  schedule:
+    # The rolling schedule writes flights on startup. A context test should
+    # observe the migrated schema, not a timetable it generated itself.
+    enabled: false
+
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN

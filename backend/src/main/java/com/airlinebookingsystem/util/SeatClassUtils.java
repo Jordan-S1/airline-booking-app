@@ -2,6 +2,7 @@ package com.airlinebookingsystem.util;
 
 import com.airlinebookingsystem.entity.Booking;
 import com.airlinebookingsystem.entity.Flight;
+import com.airlinebookingsystem.exception.InsufficientSeatsException;
 import lombok.experimental.UtilityClass;
 
 import java.math.BigDecimal;
@@ -28,12 +29,11 @@ public class SeatClassUtils {
      */
     public static BigDecimal getPriceForSeatClass(Flight flight, Booking.SeatClass seatClass) {
         return switch (seatClass) {
-            case ECONOMY -> flight.getEconomyPrice() != null ?
-                    flight.getEconomyPrice() : flight.getBasePrice();
-            case BUSINESS -> flight.getBusinessPrice() != null ?
-                    flight.getBusinessPrice() : flight.getBasePrice().multiply(BigDecimal.valueOf(2));
-            case FIRST -> flight.getFirstClassPrice() != null ?
-                    flight.getFirstClassPrice() : flight.getBasePrice().multiply(BigDecimal.valueOf(3));
+            case ECONOMY -> flight.getEconomyPrice() != null ? flight.getEconomyPrice() : flight.getBasePrice();
+            case BUSINESS -> flight.getBusinessPrice() != null ? flight.getBusinessPrice()
+                    : flight.getBasePrice().multiply(BigDecimal.valueOf(2));
+            case FIRST -> flight.getFirstClassPrice() != null ? flight.getFirstClassPrice()
+                    : flight.getBasePrice().multiply(BigDecimal.valueOf(3));
         };
     }
 
@@ -59,7 +59,8 @@ public class SeatClassUtils {
     /**
      * Updates flight seat availability for a specific class
      */
-    public static void updateFlightSeatAvailability(Flight flight, Booking.SeatClass seatClass, int seatCount, boolean restore) {
+    public static void updateFlightSeatAvailability(Flight flight, Booking.SeatClass seatClass, int seatCount,
+            boolean restore) {
         int change = restore ? seatCount : -seatCount;
 
         switch (seatClass) {
@@ -77,7 +78,8 @@ public class SeatClassUtils {
             }
         }
 
-        // Always keep availableSeats in sync — it reflects total remaining seats across all classes
+        // Always keep availableSeats in sync — it reflects total remaining seats across
+        // all classes
         int newAvailable = (flight.getAvailableSeats() != null ? flight.getAvailableSeats() : 0) + change;
         flight.setAvailableSeats(Math.max(0, newAvailable));
     }
@@ -88,9 +90,10 @@ public class SeatClassUtils {
     public static void validateSeatAvailability(Flight flight, Booking.SeatClass seatClass, int requiredSeats) {
         if (!hasEnoughSeats(flight, seatClass, requiredSeats)) {
             Integer availableSeats = getAvailableSeatsForClass(flight, seatClass);
-            throw new RuntimeException(String.format(
-                    "Insufficient %s class seats available. Required: %d, Available: %d",
-                    seatClass.name().toLowerCase(), requiredSeats, availableSeats != null ? availableSeats : 0));
+            throw new InsufficientSeatsException(
+                    seatClass.name().toLowerCase(),
+                    requiredSeats,
+                    availableSeats != null ? availableSeats : 0);
         }
     }
 }
