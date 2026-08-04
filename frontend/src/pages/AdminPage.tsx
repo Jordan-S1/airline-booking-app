@@ -43,13 +43,20 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "airports", label: "Airports" },
 ];
 
-const BOOKING_STATUSES = ["CONFIRMED", "PENDING", "CANCELLED", "COMPLETED"] as const;
+const BOOKING_STATUSES = [
+  "CONFIRMED",
+  "PENDING",
+  "CANCELLED",
+  "COMPLETED",
+] as const;
 type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
-const STATUS_OPTIONS: SelectOption<BookingStatus>[] = BOOKING_STATUSES.map((s) => ({
-  value: s,
-  label: s.charAt(0) + s.slice(1).toLowerCase(),
-}));
+const STATUS_OPTIONS: SelectOption<BookingStatus>[] = BOOKING_STATUSES.map(
+  (s) => ({
+    value: s,
+    label: s.charAt(0) + s.slice(1).toLowerCase(),
+  }),
+);
 
 /** The flights table is thousands of rows; only ever render a readable slice. */
 const FLIGHT_PAGE_SIZE = 40;
@@ -72,7 +79,10 @@ function SearchBox({
 }) {
   return (
     <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30 sm:max-w-xs">
-      <Search className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600" strokeWidth={2} />
+      <Search
+        className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600"
+        strokeWidth={2}
+      />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -93,7 +103,8 @@ export function AdminPage() {
   } | null>(null);
   const [referenceState, setReferenceState] = useState<LoadState>("loading");
 
-  const [bookingStatus, setBookingStatus] = useState<BookingStatus>("CONFIRMED");
+  const [bookingStatus, setBookingStatus] =
+    useState<BookingStatus>("CONFIRMED");
   const [bookingsLoad, setBookingsLoad] = useState<{
     status: BookingStatus;
     bookings: BookingResponseDto[] | "error";
@@ -114,9 +125,15 @@ export function AdminPage() {
   const [airportQuery, setAirportQuery] = useState("");
 
   /** Which record the form modal is editing; `"new"` means create. */
-  const [editingAirline, setEditingAirline] = useState<AirlineResponseDto | "new" | null>(null);
-  const [editingAirport, setEditingAirport] = useState<AirportResponseDto | "new" | null>(null);
-  const [editingFlight, setEditingFlight] = useState<FlightResponseDto | "new" | null>(null);
+  const [editingAirline, setEditingAirline] = useState<
+    AirlineResponseDto | "new" | null
+  >(null);
+  const [editingAirport, setEditingAirport] = useState<
+    AirportResponseDto | "new" | null
+  >(null);
+  const [editingFlight, setEditingFlight] = useState<
+    FlightResponseDto | "new" | null
+  >(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -139,10 +156,12 @@ export function AdminPage() {
     let cancelled = false;
     getBookingsByStatus(bookingStatus)
       .then((data) => {
-        if (!cancelled) setBookingsLoad({ status: bookingStatus, bookings: data });
+        if (!cancelled)
+          setBookingsLoad({ status: bookingStatus, bookings: data });
       })
       .catch(() => {
-        if (!cancelled) setBookingsLoad({ status: bookingStatus, bookings: "error" });
+        if (!cancelled)
+          setBookingsLoad({ status: bookingStatus, bookings: "error" });
       });
     return () => {
       cancelled = true;
@@ -183,14 +202,17 @@ export function AdminPage() {
   const airlines = reference?.airlines ?? [];
   const airports = reference?.airports ?? [];
 
-  const currentBookings = bookingsLoad?.status === bookingStatus ? bookingsLoad : null;
+  const currentBookings =
+    bookingsLoad?.status === bookingStatus ? bookingsLoad : null;
   const bookingsState: LoadState = !currentBookings
     ? "loading"
     : currentBookings.bookings === "error"
       ? "error"
       : "ready";
   const bookings =
-    currentBookings && currentBookings.bookings !== "error" ? currentBookings.bookings : [];
+    currentBookings && currentBookings.bookings !== "error"
+      ? currentBookings.bookings
+      : [];
 
   const currentFlights = flightLoad?.key === flightKey ? flightLoad : null;
   const flightsState: LoadState = !currentFlights
@@ -199,7 +221,9 @@ export function AdminPage() {
       ? "error"
       : "ready";
   const flightPageData =
-    currentFlights && currentFlights.data !== "error" ? currentFlights.data : null;
+    currentFlights && currentFlights.data !== "error"
+      ? currentFlights.data
+      : null;
   const visibleFlights = flightPageData?.content ?? [];
 
   const airportTerm = airportQuery.trim().toLowerCase();
@@ -267,7 +291,7 @@ export function AdminPage() {
       onDone();
     } catch {
       setDeleteError(
-        "Could not delete — records that are still referenced by flights or bookings cannot be removed. Deactivate instead.",
+        "Could not delete - records that are still referenced by flights or bookings cannot be removed. Deactivate instead.",
       );
     } finally {
       setBusyId(null);
@@ -296,7 +320,7 @@ export function AdminPage() {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`flex-1 cursor-pointer whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`flex-1 cursor-pointer whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors pointer-coarse:min-h-11 ${
                   tab === t.id
                     ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -322,7 +346,7 @@ export function AdminPage() {
                     All bookings
                   </h2>
                   <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                    Across every customer — this view is admin-only.
+                    Across every customer - this view is admin-only.
                   </p>
                 </div>
                 <div className="sm:w-48">
@@ -373,7 +397,10 @@ export function AdminPage() {
                             {b.departureAirport} → {b.arrivalAirport}
                           </td>
                           <td className="py-3 text-zinc-500 dark:text-zinc-400">
-                            {formatLocalDateTime(b.departureTime, b.departureTimezone)}
+                            {formatLocalDateTime(
+                              b.departureTime,
+                              b.departureTimezone,
+                            )}
                           </td>
                           <td className="py-3 text-right font-medium text-zinc-900 dark:text-zinc-100">
                             {formatPrice(b.totalAmount)}
@@ -428,7 +455,8 @@ export function AdminPage() {
               {flightPageData && visibleFlights.length > 0 && (
                 <>
                   <p className="mb-3 text-xs text-zinc-400 dark:text-zinc-500">
-                    {flightPageData.totalElements.toLocaleString()} matching flight
+                    {flightPageData.totalElements.toLocaleString()} matching
+                    flight
                     {flightPageData.totalElements === 1 ? "" : "s"} · page{" "}
                     {flightPageData.page + 1} of {flightPageData.totalPages}
                   </p>
@@ -447,8 +475,9 @@ export function AdminPage() {
                               {f.airlineName} ·{" "}
                               {formatLocalDateTime(
                                 f.departureTime,
-                                airports.find((a) => a.code === f.departureAirportCode)
-                                  ?.timezone ?? null,
+                                airports.find(
+                                  (a) => a.code === f.departureAirportCode,
+                                )?.timezone ?? null,
                               )}
                             </p>
                           </div>
@@ -493,7 +522,8 @@ export function AdminPage() {
                       </button>
                       <span className="text-xs tabular-nums text-zinc-400 dark:text-zinc-500">
                         {flightPageData.page * flightPageData.size + 1}–
-                        {flightPageData.page * flightPageData.size + visibleFlights.length}
+                        {flightPageData.page * flightPageData.size +
+                          visibleFlights.length}
                         {" of "}
                         {flightPageData.totalElements.toLocaleString()}
                       </span>

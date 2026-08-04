@@ -59,7 +59,7 @@ export function ExplorePage() {
         </h2>
 
         {status === "ready" && (
-          <label className="flex min-w-0 items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30 sm:w-80">
+          <label className="flex min-w-0 items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 pointer-coarse:min-h-11 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30 sm:w-80">
             <Search
               className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600"
               strokeWidth={2}
@@ -76,7 +76,7 @@ export function ExplorePage() {
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="shrink-0 cursor-pointer text-zinc-300 transition-colors hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400"
+                className="flex shrink-0 cursor-pointer items-center justify-center text-zinc-300 transition-colors hover:text-zinc-500 pointer-coarse:h-11 pointer-coarse:w-11 dark:text-zinc-600 dark:hover:text-zinc-400"
               >
                 <X className="h-4 w-4" strokeWidth={2} />
               </button>

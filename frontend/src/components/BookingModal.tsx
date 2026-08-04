@@ -321,7 +321,7 @@ export function BookingModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300 cursor-pointer"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 pointer-coarse:h-11 pointer-coarse:w-11 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -362,7 +362,7 @@ export function BookingModal({
                       aria-invalid={invalidFields.has(
                         fieldKey(index, "firstName"),
                       )}
-                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "firstName")}`}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors pointer-coarse:min-h-11 dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "firstName")}`}
                     />
                     <input
                       value={passenger.lastName}
@@ -373,10 +373,10 @@ export function BookingModal({
                       aria-invalid={invalidFields.has(
                         fieldKey(index, "lastName"),
                       )}
-                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "lastName")}`}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors pointer-coarse:min-h-11 dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "lastName")}`}
                     />
                     <label
-                      className={`flex flex-col gap-1 rounded-lg border bg-white px-3 py-2 transition-colors dark:bg-white/[0.03] ${fieldBorder(index, "dateOfBirth")}`}
+                      className={`flex flex-col gap-1 rounded-lg border bg-white px-3 py-2 transition-colors pointer-coarse:min-h-11 dark:bg-white/[0.03] ${fieldBorder(index, "dateOfBirth")}`}
                     >
                       <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                         Date of birth
@@ -411,7 +411,7 @@ export function BookingModal({
                       aria-invalid={invalidFields.has(
                         fieldKey(index, "passportNumber"),
                       )}
-                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "passportNumber")}`}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors pointer-coarse:min-h-11 dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "passportNumber")}`}
                     />
                     <input
                       value={passenger.nationality}
@@ -422,7 +422,7 @@ export function BookingModal({
                       aria-invalid={invalidFields.has(
                         fieldKey(index, "nationality"),
                       )}
-                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "nationality")}`}
+                      className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors pointer-coarse:min-h-11 dark:bg-white/[0.03] dark:text-zinc-100 ${fieldBorder(index, "nationality")}`}
                     />
                   </div>
                 </div>
@@ -496,7 +496,7 @@ export function BookingModal({
                         type="button"
                         onClick={() => setPaymentMethod(method.value)}
                         aria-pressed={isSelected}
-                        className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium cursor-pointer transition-colors ${
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium cursor-pointer transition-colors pointer-coarse:min-h-11 ${
                           isSelected
                             ? "border-accent/40 bg-accent/10 text-accent"
                             : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-white/10 dark:text-zinc-400 dark:hover:border-white/20"

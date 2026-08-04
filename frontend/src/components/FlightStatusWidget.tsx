@@ -129,7 +129,7 @@ export function FlightStatusWidget({
           <button
             type="button"
             onClick={isAuthenticated ? onFindFlights : onSignIn}
-            className="group mt-1 inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-accent transition-opacity hover:opacity-80"
+            className="group mt-1 inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-accent transition-opacity hover:opacity-80 pointer-coarse:min-h-11"
           >
             {isAuthenticated ? "Search flights" : "Sign in"}
             <ArrowRight

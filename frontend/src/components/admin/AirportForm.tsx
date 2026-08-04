@@ -106,7 +106,7 @@ export function AirportForm({
       onSubmit={submit}
       onClose={onClose}
     >
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
           label="IATA code"
           value={code}
@@ -129,7 +129,7 @@ export function AirportForm({
         onChange={setName}
         placeholder="Dublin Airport"
       />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="City" value={city} onChange={setCity} placeholder="Dublin" />
         <Field
           label="Country"
@@ -145,7 +145,7 @@ export function AirportForm({
         placeholder="Europe/Dublin"
         hint="IANA"
       />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
           label="Latitude"
           value={latitude}

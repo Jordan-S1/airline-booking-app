@@ -95,7 +95,11 @@ export function LiveTrafficWidget() {
         </div>
 
         {status === "ready" && traffic && (
-          <div className="text-right">
+          // Once the header row wraps — just under 535px — this block gets a
+          // line to itself, so it spans that line and centres in the card.
+          // Above the wrap it sits at the end of the row again, where it is
+          // only as wide as "aircraft airborne" and aligns to the right edge.
+          <div className="w-full text-center min-[535px]:w-auto min-[535px]:text-right">
             <p className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {traffic.totalTracked}
             </p>

@@ -154,7 +154,7 @@ export function FlightSearchPanel({
               key={type.value}
               type="button"
               onClick={() => handleTripTypeChange(type.value)}
-              className={`flex-1 cursor-pointer rounded-lg py-1.5 text-xs font-medium transition-colors ${
+              className={`flex-1 cursor-pointer rounded-lg py-1.5 text-xs font-medium transition-colors pointer-coarse:min-h-11 ${
                 tripType === type.value
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                   : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -264,7 +264,7 @@ export function FlightSearchPanel({
                     onClick={handleSwap}
                     whileTap={{ scale: 0.9, rotate: 180 }}
                     aria-label="Swap origin and destination"
-                    className="z-10 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:text-accent dark:border-white/10 dark:bg-obsidian-raised dark:text-zinc-400 sm:absolute sm:left-1/2 sm:-translate-x-1/2"
+                    className="z-10 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:text-accent pointer-coarse:h-11 pointer-coarse:w-11 dark:border-white/10 dark:bg-obsidian-raised dark:text-zinc-400 sm:absolute sm:left-1/2 sm:-translate-x-1/2"
                   >
                     <ArrowLeftRight className="h-4 w-4" strokeWidth={1.8} />
                   </motion.button>
@@ -359,7 +359,7 @@ export function FlightSearchPanel({
                         arrivalAirport: route.arrivalAirport,
                       }))
                     }
-                    className="cursor-pointer rounded-lg border border-zinc-200 px-3 py-1.5 font-mono text-xs font-medium text-zinc-600 transition-colors hover:border-accent/40 hover:text-accent dark:border-white/10 dark:text-zinc-400 dark:hover:border-accent/40"
+                    className="inline-flex cursor-pointer items-center rounded-lg border border-zinc-200 px-3 py-1.5 font-mono text-xs font-medium text-zinc-600 transition-colors hover:border-accent/40 hover:text-accent pointer-coarse:min-h-11 dark:border-white/10 dark:text-zinc-400 dark:hover:border-accent/40"
                   >
                     {route.departureAirport} → {route.arrivalAirport}
                   </button>

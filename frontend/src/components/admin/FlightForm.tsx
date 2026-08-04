@@ -166,7 +166,7 @@ export function FlightForm({
       onSubmit={submit}
       onClose={onClose}
     >
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
           label="Flight number"
           value={flightNumber}
@@ -181,7 +181,7 @@ export function FlightForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <SelectField
           label="From"
           value={departureCode}
@@ -196,7 +196,7 @@ export function FlightForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
           label="Departs"
           type="datetime-local"
@@ -227,19 +227,19 @@ export function FlightForm({
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Economy seats" value={economySeats} onChange={setEconomySeats} />
         <Field label="Business seats" value={businessSeats} onChange={setBusinessSeats} />
         <Field label="First seats" value={firstSeats} onChange={setFirstSeats} />
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Economy €" value={economyPrice} onChange={setEconomyPrice} />
         <Field label="Business €" value={businessPrice} onChange={setBusinessPrice} />
         <Field label="First €" value={firstPrice} onChange={setFirstPrice} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
           label="Aircraft"
           value={aircraft}

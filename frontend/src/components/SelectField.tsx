@@ -106,10 +106,13 @@ export function SelectField<T extends string | number>({
 
   return (
     <div ref={containerRef} className="relative min-w-0">
-      <div className="flex min-w-0 flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
+      <div className="relative flex min-w-0 flex-col gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 transition-colors focus-within:border-zinc-400 dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:border-white/30">
         <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
           {label}
         </span>
+        {/* The stretched ::after makes the whole bordered card the hit area.
+            The value line alone is only 20px tall, which is an awkward target
+            on a phone, and the label above it is otherwise inert. */}
         <button
           type="button"
           onClick={() => (isOpen ? setIsOpen(false) : openList())}
@@ -117,7 +120,7 @@ export function SelectField<T extends string | number>({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-label={label}
-          className="flex w-full cursor-pointer items-center justify-between gap-2 text-left text-sm font-medium text-zinc-900 outline-none dark:text-zinc-100"
+          className="flex w-full cursor-pointer items-center justify-between gap-2 text-left text-sm font-medium text-zinc-900 outline-none after:absolute after:inset-0 after:content-[''] dark:text-zinc-100"
         >
           <span className="truncate">{selectedLabel}</span>
           <ChevronDown
