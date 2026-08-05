@@ -15,10 +15,17 @@
     <description>airline-booking-system</description>
     <url/>
     <licenses>
-        <license/>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Jordan Shodipo</name>
+            <url>https://github.com/Jordan-S1</url>
+        </developer>
     </developers>
     <scm>
         <connection/>

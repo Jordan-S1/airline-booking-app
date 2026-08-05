@@ -13,6 +13,10 @@ spring:
 
   jpa:
     hibernate:
+      # Deliberately not configurable. Flyway owns the schema in every
+      # environment, so there is no value this should ever take but
+      # `validate` - and `update` would let Hibernate quietly alter a
+      # migrated schema, which is the drift `validate` is here to catch.
       ddl-auto: validate
     show-sql: false
     open-in-view: false

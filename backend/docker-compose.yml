@@ -50,7 +50,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      DDL_AUTO: ${DDL_AUTO:-validate}
+      # Required on first start against an empty database: DataSeeder reads
+      # these via System.getenv and refuses to boot without them.
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       SERVER_PORT: ${SERVER_PORT:-8080}
       # Mock payment gateway. Off by default; set the rate to 1.0 to exercise
       # the failure path deliberately, e.g.
