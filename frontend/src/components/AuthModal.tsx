@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
-import { AnimatePresence, motion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useReturnFocus } from "../lib/useReturnFocus";
 import { Eye, EyeOff, Lock, Mail, Phone, User, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
@@ -128,6 +129,7 @@ function TextField({
 }
 
 export function AuthModal({ onClose }: { onClose: () => void }) {
+  useReturnFocus();
   const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,21 +174,11 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 12, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.98 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-obsidian-raised sm:p-6"
+    <Dialog.Root open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="overlay fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+        <Dialog.Content
+          className="pop fixed inset-0 z-50 m-auto h-fit max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl focus:outline-none dark:border-white/10 dark:bg-obsidian-raised sm:p-6"
         >
           {/* Ambient accent glow, consistent with the dashboard background */}
           <div
@@ -194,22 +186,20 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
             className="pointer-events-none absolute inset-x-0 -top-24 h-48 bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.16),transparent_70%)]"
           />
 
-          <button
-            type="button"
-            onClick={onClose}
+          <Dialog.Close
             aria-label="Close"
-            className="absolute right-5 top-5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300"
+            className="absolute right-5 top-5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 pointer-coarse:h-11 pointer-coarse:w-11 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Dialog.Close>
 
           <div className="mb-4 flex flex-col items-center text-center">
             <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white shadow-sm dark:bg-white dark:text-zinc-900">
               S
             </span>
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <Dialog.Title className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               {mode === "login" ? "Welcome back" : "Create your account"}
-            </h2>
+            </Dialog.Title>
             <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
               {mode === "login"
                 ? "Sign in to manage your bookings and trips."
@@ -306,8 +296,8 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
               )}
             </button>
           </form>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

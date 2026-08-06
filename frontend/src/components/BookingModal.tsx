@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { AnimatePresence, motion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useReturnFocus } from "../lib/useReturnFocus";
 import { Check, CreditCard, Landmark, WalletCards, X } from "lucide-react";
 import { FaPaypal } from "react-icons/fa6";
 import type { ComponentType } from "react";
@@ -95,6 +96,8 @@ export function BookingModal({
   seatClass,
   onClose,
 }: BookingModalProps) {
+  useReturnFocus();
+
   const { isAuthenticated, user } = useAuth();
   const { formatPrice } = useCurrency();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -285,25 +288,16 @@ export function BookingModal({
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 px-4 py-8 backdrop-blur-sm"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 12, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.98 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-obsidian-raised sm:p-8"
+    <>
+      <Dialog.Root open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="overlay fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+        <Dialog.Content
+          className="pop fixed inset-0 z-50 m-auto h-fit max-h-[calc(100dvh-4rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl focus:outline-none dark:border-white/10 dark:bg-obsidian-raised sm:p-8"
         >
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              <Dialog.Title className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                 {step === "confirmation"
                   ? isMultiLeg
                     ? "Itinerary confirmed"
@@ -311,20 +305,18 @@ export function BookingModal({
                   : isMultiLeg
                     ? `Book itinerary · ${flights.length} legs`
                     : "Book flight"}
-              </h2>
-              <p className="mt-0.5 font-mono text-sm text-zinc-500 dark:text-zinc-400">
+              </Dialog.Title>
+              <Dialog.Description className="mt-0.5 font-mono text-sm text-zinc-500 dark:text-zinc-400">
                 {flights[0].departureAirport}
                 {flights.map((f) => ` → ${f.arrivalAirport}`).join("")}
-              </p>
+              </Dialog.Description>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
+            <Dialog.Close
               aria-label="Close"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 pointer-coarse:h-11 pointer-coarse:w-11 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Dialog.Close>
           </div>
 
           {!isAuthenticated && (
@@ -612,12 +604,13 @@ export function BookingModal({
               </div>
             </div>
           )}
-        </motion.div>
-      </motion.div>
+        </Dialog.Content>
+      </Dialog.Portal>
+      </Dialog.Root>
 
       {isAuthModalOpen && (
         <AuthModal onClose={() => setIsAuthModalOpen(false)} />
       )}
-    </AnimatePresence>
+    </>
   );
 }

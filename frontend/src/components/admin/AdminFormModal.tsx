@@ -1,4 +1,5 @@
-import { AnimatePresence, motion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useReturnFocus } from "../../lib/useReturnFocus";
 import { X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 
@@ -25,47 +26,40 @@ export function AdminFormModal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useReturnFocus();
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit();
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-10 backdrop-blur-sm"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 12, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.98 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-obsidian-raised sm:p-8"
+    // Radix owns the open state; this component is only rendered while it
+    // should be visible, so `open` is constant and closing is delegated
+    // upward. onOpenChange covers Escape and outside-click alike.
+    <Dialog.Root open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="overlay fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+        <Dialog.Content
+          className="pop fixed inset-0 z-50 m-auto h-fit max-h-[calc(100dvh-5rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl focus:outline-none dark:border-white/10 dark:bg-obsidian-raised sm:p-8"
         >
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              <Dialog.Title className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                 {title}
-              </h2>
+              </Dialog.Title>
               {subtitle && (
-                <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                <Dialog.Description className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
                   {subtitle}
-                </p>
+                </Dialog.Description>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
+            <Dialog.Close
               aria-label="Close"
-              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300"
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 pointer-coarse:h-11 pointer-coarse:w-11 dark:text-zinc-500 dark:hover:bg-white/5 dark:hover:text-zinc-300"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Dialog.Close>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -97,9 +91,9 @@ export function AdminFormModal({
               </button>
             </div>
           </form>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
