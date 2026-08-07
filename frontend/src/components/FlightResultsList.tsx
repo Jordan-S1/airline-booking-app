@@ -20,12 +20,14 @@ function FlightResultCard({
   isSelected,
   selectLabel,
   showDate,
+  priceMode,
 }: {
   flight: FlightSearchResponseDto;
   onSelect: (flight: FlightSearchResponseDto) => void;
   isSelected: boolean;
   selectLabel: string;
   showDate: boolean;
+  priceMode: PriceMode;
 }) {
   const { formatPrice } = useCurrency();
   const dayOffset = arrivalDayOffset(flight);
@@ -96,11 +98,18 @@ function FlightResultCard({
       <div className="flex items-center justify-between gap-4 sm:justify-end">
         <div className="text-right">
           <p className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            {priceMode === "from" && (
+              <span className="mr-1 text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                from
+              </span>
+            )}
             {formatPrice(flight.price)}
           </p>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            {flight.availableSeats} seats left
-          </p>
+          {priceMode === "exact" && (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              {flight.availableSeats} seats left
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -118,6 +127,19 @@ function FlightResultCard({
     </motion.div>
   );
 }
+
+/**
+ * How the price on a card should be read.
+ *
+ * <p>"exact" is the fare for the cabin that was searched, shown beside that
+ * same cabin's remaining seats — the two agree.
+ *
+ * <p>"from" is for browse views where no cabin has been chosen. The API
+ * answers those with the lowest cabin's fare but the *whole aircraft's*
+ * availability, so the seat count does not describe seats at that price and
+ * is left out rather than shown as if it did.
+ */
+export type PriceMode = "exact" | "from";
 
 export interface ResultSection {
   /** Stable key — the leg index for multi-city, or "outbound"/"return". */
@@ -145,6 +167,18 @@ interface FlightResultsListProps {
    * already fixed by the query; on for lists that span the whole horizon.
    */
   showDates?: boolean;
+  /** See {@link PriceMode}. Defaults to the searched-cabin reading. */
+  priceMode?: PriceMode;
+  /**
+   * Qualifier shown beside the heading — the cabin these results are for.
+   *
+   * <p>Every price and seat count below is scoped to one cabin, and without
+   * this nothing on screen says which. It belongs here rather than on each
+   * card because one search returns one cabin, so per-card it would repeat
+   * unchanged on every row. It must come from whatever produced the results,
+   * not from a live form control, which can be changed without re-searching.
+   */
+  headingNote?: string;
 }
 
 export function FlightResultsList({
@@ -157,6 +191,8 @@ export function FlightResultsList({
   emptyMessage = "No flights found for this route and date.",
   toolbar,
   showDates = false,
+  priceMode = "exact",
+  headingNote,
 }: FlightResultsListProps) {
   if (status === "idle") return null;
 
@@ -168,9 +204,16 @@ export function FlightResultsList({
       animate={{ opacity: 1, y: 0 }}
       className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:p-8"
     >
-      <h2 className="mb-4 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-        {heading}
-      </h2>
+      <div className="mb-4 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+          {heading}
+        </h2>
+        {headingNote && (
+          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
+            {headingNote}
+          </span>
+        )}
+      </div>
 
       {toolbar && <div className="mb-5">{toolbar}</div>}
 
@@ -217,6 +260,7 @@ export function FlightResultsList({
                       isSelected={section.selectedFlightId === flight.id}
                       selectLabel={isMultiSection ? "Select" : "Book"}
                       showDate={showDates}
+                      priceMode={priceMode}
                       onSelect={(f) => onSelectFlight(section.id, f)}
                     />
                   ))}

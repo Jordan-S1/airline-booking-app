@@ -432,13 +432,22 @@ public class FlightService {
                 flightRepository.searchPaged(term, pageable), this::mapToFlightResponse);
     }
 
+    /**
+     * @param seatClass a cabin name, or {@code "ALL"} for browse views where the
+     *                  caller has not chosen one.
+     */
     private FlightSearchResponse mapToFlightSearchResponse(Flight flight, String seatClass) {
-        // For search results: show seats available for the requested class
-        // For upcoming/browse: show total available seats across all classes
         boolean isSpecificClass = seatClass != null && !seatClass.equalsIgnoreCase("ALL");
+
+        // A chosen cabin: its own seats. Browsing: every seat on the aircraft.
         Integer availableSeats = isSpecificClass
                 ? getAvailableSeatsForClass(flight, seatClass)
                 : flight.getAvailableSeats();
+
+        // A chosen cabin: its own fare. Browsing: the cheapest cabin, as a lead-in.
+        BigDecimal price = isSpecificClass
+                ? getPriceForSeatClass(flight, seatClass)
+                : SeatClassUtils.getPriceForSeatClass(flight, Booking.SeatClass.ECONOMY);
 
         return new FlightSearchResponse(
                 flight.getId(),
@@ -454,7 +463,7 @@ public class FlightService {
                 flight.getDepartureAirport().getTimezone(),
                 flight.getArrivalAirport().getTimezone(),
                 flight.getDuration(),
-                getPriceForSeatClass(flight, seatClass),
+                price,
                 availableSeats,
                 flight.getAircraft()
         );

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeftRight, ArrowRight, Plus, X } from "lucide-react";
 import { AirportAutocomplete } from "./AirportAutocomplete";
 import { SelectField, type SelectOption } from "./SelectField";
+import { SEAT_CLASS_OPTIONS } from "../lib/seatClass";
 import type {
   FlightSearchRequestDto,
   MultiCityLegRequestDto,
@@ -17,11 +18,7 @@ const TRIP_TYPES: { value: TripType; label: string }[] = [
   { value: "MULTI_CITY", label: "Multi-city" },
 ];
 
-const SEAT_CLASSES: SelectOption<SeatClass>[] = [
-  { value: "ECONOMY", label: "Economy" },
-  { value: "BUSINESS", label: "Business" },
-  { value: "FIRST", label: "First" },
-];
+const SEAT_CLASSES: SelectOption<SeatClass>[] = SEAT_CLASS_OPTIONS;
 
 const PASSENGER_OPTIONS: SelectOption<number>[] = [1, 2, 3, 4, 5, 6].map((n) => ({
   value: n,

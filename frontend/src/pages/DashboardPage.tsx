@@ -10,6 +10,7 @@ import {
   type ResultSection,
 } from "../components/FlightResultsList";
 import { BookingModal } from "../components/BookingModal";
+import { seatClassLabel } from "../lib/seatClass";
 import { AuthModal } from "../components/AuthModal";
 import type { SearchSubmission } from "../components/FlightSearchPanel";
 import {
@@ -462,6 +463,7 @@ export function DashboardPage() {
           errorMessage={searchError}
           sections={sections}
           onSelectFlight={handleSelectFlight}
+          headingNote={seatClassLabel(searchSeatClass)}
           footer={
             isMultiLeg ? (
               <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">

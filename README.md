@@ -2,6 +2,8 @@
 
 A full-stack airline booking platform - flight search, per-cabin seat inventory, payments, and live aircraft tracking - built with Spring Boot and React.
 
+> **SkyAir is a fictional airline.** This is a portfolio project: no bookings are real, no payments are processed, and it is not affiliated with any company using a similar name.
+
 <p>
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-orange">
   <img alt="Spring Boot 3.5" src="https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F">
@@ -11,6 +13,8 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
   <img alt="89 tests passing" src="https://img.shields.io/badge/tests-89%20passing-brightgreen">
   <a href="https://github.com/Jordan-S1/airline-booking-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Jordan-S1/airline-booking-app/actions/workflows/ci.yml/badge.svg"></a>
 </p>
+
+![SkyAir flight search](docs/dashboard.png)
 
 ---
 
@@ -23,6 +27,8 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 - **Multi-currency display** - prices are stored in EUR and converted only for display
 - **Admin console** - full CRUD over flights, airlines and airports, plus a network-wide booking view
 - **Rolling timetable** - flight numbers are treated as daily services and materialised across a moving horizon, so there is always bookable inventory
+
+![Search results](docs/search-results.png)
 
 ---
 
@@ -55,7 +61,7 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 
 ## Quick start
 
-**Prerequisites:** Docker · Java 21 · Node 20.19+ or 22.13+ *(Vite 7 and ESLint 10 both refuse older 20.x and 22.x patches)*
+**Prerequisites:** Docker · Java 21 · Node 20.19+ or 22.13+
 
 ```bash
 git clone https://github.com/Jordan-S1/airline-booking-app.git
@@ -102,7 +108,7 @@ npm install
 npm run dev
 ```
 
-|            |                                       |
+| Service    | URL                                   |
 | ---------- | ------------------------------------- |
 | App        | http://localhost:5173                 |
 | API        | http://localhost:8080/api/v1          |
@@ -143,13 +149,13 @@ Two design notes, because both are easy to get wrong:
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request against `main`.
 
-| Job | Does | Runs on |
-|---|---|---|
-| **Backend tests** | `./mvnw test` — all 89 | every push and PR |
-| **Frontend lint and build** | `npm ci`, `npm run lint`, `npm run build` | every push and PR |
-| **Publish image** | Builds the Dockerfile and pushes to GHCR | `main` only, after both pass |
+| Job                         | Does                                      | Runs on                      |
+| --------------------------- | ----------------------------------------- | ---------------------------- |
+| **Backend tests**           | `./mvnw test` - all 89                    | every push and PR            |
+| **Frontend lint and build** | `npm ci`, `npm run lint`, `npm run build` | every push and PR            |
+| **Publish image**           | Builds the Dockerfile and pushes to GHCR  | `main` only, after both pass |
 
-No repository secrets are needed — publishing uses the built-in `GITHUB_TOKEN`.
+No repository secrets are needed - publishing uses the built-in `GITHUB_TOKEN`.
 
 Images are tagged `latest` and with the commit SHA, so a deployment can pin exactly what it runs rather than whatever `latest` happens to point at:
 
@@ -217,12 +223,28 @@ frontend/src/
 
 **Server-side OpenSky proxy.** The anonymous tier allows 400 credits a day and a bounding-box request costs 1–4. Calling it from the browser would spend that budget per visitor, so the backend fetches and caches it.
 
+![Live air traffic](docs/live-traffic.png)
+
 **Request-keyed loading state.** The frontend derives "loading" from whether the in-flight request still matches the current parameters, rather than assigning it inside an effect. This removes the stale-response race and satisfies the React Compiler's `set-state-in-effect` rule.
 
 **Touch targets via `pointer-coarse`.** Interactive elements grow to 44 px on touch devices only, so the desktop layout keeps its intended density.
 
 ---
 
+## Credits
+
+App icon: <a href="https://www.flaticon.com/free-icons/plane" title="plane icons">Plane icons created by Konkapp - Flaticon</a>
+
+---
+
 ## Licence
 
-Released under the [MIT License](LICENSE). You may use, modify and distribute this code, including commercially, provided the copyright notice is retained.
+Released under the [MIT License](LICENSE).
+
+The MIT licence covers this project's own source. The app icon is third-party
+and remains under Flaticon's free licence, which requires the attribution
+above to be kept.
+
+"SkyAir" is an invented name used to give the demo a subject. It is not a
+trademark claim, and no affiliation with any real business using a similar
+name is intended or implied.

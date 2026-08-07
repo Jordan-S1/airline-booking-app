@@ -201,6 +201,7 @@ export function DestinationPage() {
             sections={sections}
             heading={`Flights arriving at ${airport.code}`}
             showDates
+            priceMode="from"
             emptyMessage={
               isFiltered
                 ? "No flights match these filters."

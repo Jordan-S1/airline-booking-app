@@ -194,9 +194,12 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
           </Dialog.Close>
 
           <div className="mb-4 flex flex-col items-center text-center">
-            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white shadow-sm dark:bg-white dark:text-zinc-900">
-              S
-            </span>
+            {/* Matches the navbar mark: the aircraft on its own, no badge. */}
+            <img
+              src="/airplane.png"
+              alt=""
+              className="mb-2 h-8 w-8 object-contain"
+            />
             <Dialog.Title className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               {mode === "login" ? "Welcome back" : "Create your account"}
             </Dialog.Title>

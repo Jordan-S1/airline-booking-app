@@ -68,11 +68,28 @@ class SeatClassUtilsTest {
 
         @ParameterizedTest
         @NullAndEmptySource
-        @ValueSource(strings = { "   ", "PREMIUM", "not-a-class", "123" })
-        @DisplayName("falls back to ECONOMY for null, blank or unrecognised input")
-        void fallsBackToEconomy(String input) {
+        @ValueSource(strings = { "   " })
+        @DisplayName("treats an omitted cabin as ECONOMY — that is a default, not a mistake")
+        void defaultsToEconomyWhenOmitted(String input) {
             assertThat(SeatClassUtils.parseSeatClass(input))
                     .isEqualTo(Booking.SeatClass.ECONOMY);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "PREMIUM", "not-a-class", "123", "ALL" })
+        @DisplayName("rejects a cabin that was named but is not recognised")
+        void rejectsUnknownSeatClass(String input) {
+            assertThatThrownBy(() -> SeatClassUtils.parseSeatClass(input))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining(input)
+                    .hasMessageContaining("ECONOMY");
+        }
+
+        @Test
+        @DisplayName("names the valid options so the caller can correct the request")
+        void errorListsValidOptions() {
+            assertThatThrownBy(() -> SeatClassUtils.parseSeatClass("PREMIUM"))
+                    .hasMessageContainingAll("ECONOMY", "BUSINESS", "FIRST");
         }
     }
 

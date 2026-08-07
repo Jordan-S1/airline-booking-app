@@ -81,9 +81,14 @@ export function Navbar() {
             to="/"
             className="flex items-center gap-2 pointer-coarse:min-h-11"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white dark:bg-white dark:text-zinc-900">
-              S
-            </span>
+            {/* No badge: the mark is the aircraft itself. It keeps the 28px
+                footprint of the old badge so the lockup and the header height
+                are unchanged. */}
+            <img
+              src="/airplane.png"
+              alt=""
+              className="h-7 w-7 shrink-0 object-contain"
+            />
             <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               SkyAir
             </span>

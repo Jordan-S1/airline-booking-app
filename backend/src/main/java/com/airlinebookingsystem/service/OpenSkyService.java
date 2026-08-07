@@ -132,10 +132,15 @@ public class OpenSkyService {
             return new LiveTrafficResponse(List.of(), 0, regionName, LocalDateTime.now());
         }
 
+        // Aircraft at a gate or taxiing are dropped here rather than further
+        // down, so they are excluded from the count as well as the list. The
+        // figure is presented as "aircraft airborne", and counting ground
+        // traffic in it was invisible only because the altitude sort pushed
+        // those aircraft below the cut and out of sight.
         List<LiveFlightResponse> flights = new ArrayList<>();
         for (List<Object> state : response.states()) {
             LiveFlightResponse mapped = mapState(state);
-            if (mapped != null) {
+            if (mapped != null && !mapped.onGround()) {
                 flights.add(mapped);
             }
         }
@@ -152,7 +157,8 @@ public class OpenSkyService {
                 ? LocalDateTime.ofInstant(Instant.ofEpochSecond(response.time()), ZoneId.systemDefault())
                 : LocalDateTime.now();
 
-        log.info("OpenSky returned {} aircraft over [{}]", totalTracked, regionName);
+        log.info("OpenSky: {} airborne aircraft over [{}] ({} states received)",
+                totalTracked, regionName, response.states().size());
         return new LiveTrafficResponse(topFlights, totalTracked, regionName, retrievedAt);
     }
 

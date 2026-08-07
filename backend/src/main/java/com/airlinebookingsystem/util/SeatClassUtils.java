@@ -13,6 +13,7 @@ public class SeatClassUtils {
      * Converts string seat class to enum, with validation
      */
     public static Booking.SeatClass parseSeatClass(String seatClassStr) {
+        // Omitting the cabin is a request for the default one, not a mistake.
         if (seatClassStr == null || seatClassStr.trim().isEmpty()) {
             return Booking.SeatClass.ECONOMY;
         }
@@ -20,7 +21,14 @@ public class SeatClassUtils {
         try {
             return Booking.SeatClass.valueOf(seatClassStr.toUpperCase().trim());
         } catch (IllegalArgumentException e) {
-            return Booking.SeatClass.ECONOMY; // default fallback
+            // Naming a cabin that does not exist is a caller error, and
+            // answering it with economy hides that. It did exactly that for
+            // "ALL": browse views were priced at the economy fare while
+            // reporting the whole aircraft's seats, and nothing said so.
+            // IllegalArgumentException is translated to 400 by the global handler.
+            throw new IllegalArgumentException(
+                    "Unknown seat class '" + seatClassStr.trim()
+                            + "'. Expected one of: ECONOMY, BUSINESS, FIRST.");
         }
     }
 
