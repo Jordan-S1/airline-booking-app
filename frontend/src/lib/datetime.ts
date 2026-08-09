@@ -35,6 +35,11 @@ export function formatInZone(
   options: Intl.DateTimeFormatOptions,
 ): string {
   const date = parseApiInstant(iso);
+  // Intl throws on an invalid date, and so would the fallback below, which
+  // only exists to survive an unusable *zone*. Bail out first so one bad
+  // timestamp renders as nothing rather than taking the page down with it.
+  if (Number.isNaN(date.getTime())) return "";
+
   try {
     return new Intl.DateTimeFormat("en-US", {
       ...options,

@@ -32,21 +32,11 @@ export function HomePage() {
   return (
     <main className="mx-auto max-w-6xl">
       <section className="flex flex-col items-center pt-16 pb-20 text-center sm:pt-24">
-        <motion.span
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mt-16 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/60 px-3 py-1 text-xs font-medium text-zinc-500 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 sm:mt-0"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          The premium way to fly
-        </motion.span>
-
         <motion.h1
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.05 }}
-          className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-6xl"
+          className="mt-16 max-w-3xl text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:mt-0 sm:text-6xl"
         >
           Travel, reimagined for the modern flyer.
         </motion.h1>

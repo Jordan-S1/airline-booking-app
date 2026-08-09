@@ -69,6 +69,10 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
       # `npm run build` is `tsc -b && vite build`, so this type-checks too.
       - name: Build
         working-directory: frontend
