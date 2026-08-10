@@ -24,3 +24,20 @@ export async function register(
   );
   return data;
 }
+
+/**
+ * Asks for a reset link. Always resolves, whether or not the address is
+ * registered — the API answers identically on purpose, so the caller must not
+ * report "no such account" either.
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  await apiClient.post("/auth/forgot-password", { email });
+}
+
+/** Redeems a reset token. Single use, and only until it expires. */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  await apiClient.post("/auth/reset-password", { token, newPassword });
+}

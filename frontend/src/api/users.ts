@@ -16,3 +16,16 @@ export async function updateUser(
   );
   return data;
 }
+
+/**
+ * Changes the signed-in user's own password.
+ *
+ * <p>A wrong current password comes back as 400, not 401 — the api client
+ * treats 401 as an ended session and would sign the user out mid-form.
+ */
+export async function changePassword(
+  id: number,
+  request: { currentPassword: string; newPassword: string },
+): Promise<void> {
+  await apiClient.patch(`/users/${id}/password`, request);
+}

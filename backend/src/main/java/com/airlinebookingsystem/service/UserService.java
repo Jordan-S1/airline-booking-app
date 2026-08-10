@@ -1,6 +1,7 @@
 package com.airlinebookingsystem.service;
 
 import com.airlinebookingsystem.dto.user.UserRoleUpdateRequest;
+import com.airlinebookingsystem.dto.user.PasswordChangeRequest;
 import com.airlinebookingsystem.dto.user.UserUpdateRequest;
 import com.airlinebookingsystem.dto.user.UserResponse;
 import com.airlinebookingsystem.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final CurrencyService currencyService;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
@@ -97,6 +100,39 @@ public class UserService implements UserDetailsService {
 
         log.info("Updated profile for user ID: {}", id);
         return mapToUserResponse(userRepository.save(user));
+    }
+
+    /**
+     * Changes a user's own password.
+     *
+     * <p>Verifying the current password matters even though the caller holds a
+     * valid token: the token proves the session was started by the account
+     * holder at some point, not that they are the one asking now.
+     *
+     * <p>A wrong current password is reported as 400 rather than 401 on
+     * purpose. The client treats 401 as "this session is over" and signs the
+     * user out, which would be a strange answer to a typo in a form field.
+     */
+    public void changePassword(@NonNull Long id, PasswordChangeRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            // Deliberately not "no user with that password" or similar — the
+            // caller is already known, so there is nothing to enumerate here.
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new IllegalArgumentException(
+                    "New password must be different from the current one");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        // The password itself is never logged, at any level.
+        log.info("Password changed for user ID: {}", id);
     }
 
     /**

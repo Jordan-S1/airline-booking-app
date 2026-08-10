@@ -1,6 +1,7 @@
 package com.airlinebookingsystem.controller;
 
 import com.airlinebookingsystem.dto.user.UserRoleUpdateRequest;
+import com.airlinebookingsystem.dto.user.PasswordChangeRequest;
 import com.airlinebookingsystem.dto.user.UserUpdateRequest;
 import com.airlinebookingsystem.dto.user.UserResponse;
 import com.airlinebookingsystem.service.UserService;
@@ -89,6 +90,31 @@ public class UserController {
             @Valid @RequestBody UserUpdateRequest request) {
         log.info("PUT /users/{}", id);
         return ResponseEntity.ok(userService.updateUser(id, request));
+    }
+
+    @Operation(summary = "Change your own password",
+            description = "Requires the current password. Account holder only — an admin "
+                    + "cannot use this to set someone else's password.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Password changed"),
+            @ApiResponse(responseCode = "400", description = "Current password wrong, or new password invalid"),
+            @ApiResponse(responseCode = "401", description = "Not signed in"),
+            @ApiResponse(responseCode = "403", description = "Not your account"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    // Owner only, unlike its neighbours. An admin changing another user's
+    // password would have to supply that user's current one, which they do not
+    // know — and an admin-initiated reset is a different feature with different
+    // safeguards, not something to fall out of this endpoint by accident.
+    @PreAuthorize("authentication.principal.id.equals(#id)")
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<Void> changePassword(
+            @PathVariable Long id,
+            @Valid @RequestBody PasswordChangeRequest request) {
+        // The request body is never logged — it holds two plaintext passwords.
+        log.info("PATCH /users/{}/password", id);
+        userService.changePassword(id, request);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Update user role", description = "ADMIN only")

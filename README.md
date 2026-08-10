@@ -27,6 +27,7 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 - **Multi-currency display** - prices are stored in EUR and converted only for display
 - **Admin console** - full CRUD over flights, airlines and airports, plus a network-wide booking view
 - **Rolling timetable** - flight numbers are treated as daily services and materialised across a moving horizon, so there is always bookable inventory
+- **Password reset** by single-use, expiring token - see the note below on why no email is sent
 
 ![Search results](docs/search-results.png)
 
@@ -228,6 +229,32 @@ frontend/src/
 **Request-keyed loading state.** The frontend derives "loading" from whether the in-flight request still matches the current parameters, rather than assigning it inside an effect. This removes the stale-response race and satisfies the React Compiler's `set-state-in-effect` rule.
 
 **Touch targets via `pointer-coarse`.** Interactive elements grow to 44 px on touch devices only, so the desktop layout keeps its intended density.
+
+---
+
+## Password reset
+
+There is no mail provider, so `POST /auth/forgot-password` writes the reset link
+to the **server log** instead of sending it:
+
+```
+docker compose --profile app logs app | grep "Password reset link"
+```
+
+The link is deliberately not returned in the HTTP response. Doing that would
+turn "forgot password" into account takeover for any address an attacker can
+guess, which is a worse demo than one extra step. Everything else is the real
+design:
+
+- 256 bits from `SecureRandom`, not a UUID
+- only the SHA-256 is stored, so the table is useless if it leaks
+- single use, and expiring (`security.password-reset.ttl-minutes`, default 30)
+- issuing a token retires the account's outstanding ones
+- the request is answered identically whether or not the address is
+  registered, so it cannot be used to discover who has an account
+- unknown, expired and already-used tokens all give the same message
+
+Adding email means changing where the link is delivered and nothing else.
 
 ---
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useReturnFocus } from "../lib/useReturnFocus";
+import { forgotPassword } from "../api/auth";
 import { Eye, EyeOff, Lock, Mail, Phone, User, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
@@ -132,6 +133,8 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
   useReturnFocus();
   const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
+  /** Set once a reset has been requested, so the reply is shown in place. */
+  const [resetRequested, setResetRequested] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -266,6 +269,34 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
             />
             {mode === "register" && (
               <PasswordStrengthMeter password={password} />
+            )}
+
+            {mode === "login" && !resetRequested && (
+              <button
+                type="button"
+                onClick={async () => {
+                  // Fires whether or not the address is registered; the API
+                  // answers identically either way, so this must not report
+                  // "no such account" and reveal what the API withheld.
+                  setResetRequested(true);
+                  try {
+                    await forgotPassword(email);
+                  } catch {
+                    // Deliberately swallowed — see above.
+                  }
+                }}
+                disabled={!email}
+                className="-mt-1 self-end text-xs text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-900 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50 pointer-coarse:min-h-11 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer"
+              >
+                Forgot password?
+              </button>
+            )}
+
+            {mode === "login" && resetRequested && (
+              <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300">
+                If that address has an account, a reset link has been issued.
+                This demo sends no email - the link is written to the server log.
+              </p>
             )}
 
             {mode === "register" && (

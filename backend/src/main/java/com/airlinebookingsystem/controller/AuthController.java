@@ -1,9 +1,12 @@
 package com.airlinebookingsystem.controller;
 
 import com.airlinebookingsystem.dto.auth.AuthResponse;
+import com.airlinebookingsystem.dto.auth.ForgotPasswordRequest;
 import com.airlinebookingsystem.dto.auth.LoginRequest;
+import com.airlinebookingsystem.dto.auth.ResetPasswordRequest;
 import com.airlinebookingsystem.dto.auth.RegisterRequest;
 import com.airlinebookingsystem.service.AuthService;
+import com.airlinebookingsystem.service.PasswordResetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     @Operation(summary = "Register a new user", description = "Creates a new CUSTOMER account and returns a JWT token immediately")
     @ApiResponses({
@@ -56,5 +60,38 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("POST /auth/login — {}", request.getEmail());
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @Operation(summary = "Request a password reset",
+            description = "Always returns 204, whether or not the address is registered — "
+                    + "answering differently would let anyone test who has an account. "
+                    + "No email is sent in this project: the link is written to the "
+                    + "server log.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Request accepted"),
+            @ApiResponse(responseCode = "400", description = "Email missing or malformed", content = @Content)
+    })
+    @SecurityRequirements
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        // The address is not logged here — the service logs the outcome instead.
+        log.info("POST /auth/forgot-password");
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Reset a password using a token",
+            description = "Single use, and only until the token expires.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Password reset"),
+            @ApiResponse(responseCode = "400", description = "Token unknown, expired or already used", content = @Content)
+    })
+    @SecurityRequirements
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        // The token is a credential; it is never written to the request log.
+        log.info("POST /auth/reset-password");
+        passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 }

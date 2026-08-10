@@ -9,6 +9,7 @@ import com.airlinebookingsystem.exception.DuplicateResourceException;
 import com.airlinebookingsystem.security.JwtService;
 import com.airlinebookingsystem.security.RestAuthenticationEntryPoint;
 import com.airlinebookingsystem.service.AuthService;
+import com.airlinebookingsystem.service.PasswordResetService;
 import com.airlinebookingsystem.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -46,6 +47,8 @@ class AuthControllerTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private AuthService authService;
+    // AuthController gained the reset endpoints, so the slice needs this too.
+    @MockitoBean private PasswordResetService passwordResetService;
 
     // The imported chain installs JwtAuthFilter, so its collaborators have to
     // exist. No request here carries a token, so the filter just passes through.

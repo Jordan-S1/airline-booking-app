@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Check } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
+import { ChangePasswordCard } from "../components/ChangePasswordCard";
 import { SelectField } from "../components/SelectField";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
@@ -214,6 +215,8 @@ export function ProfilePage() {
           </div>
         </div>
       )}
+
+      {status === "ready" && user && <ChangePasswordCard userId={user.userId} />}
     </main>
   );
 }
