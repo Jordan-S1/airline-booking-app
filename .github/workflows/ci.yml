@@ -28,9 +28,10 @@ jobs:
           java-version: "21"
           cache: maven
 
-      # No environment setup: 88 of the tests mock their collaborators, and
-      # ApplicationTests starts its own Postgres via Testcontainers, which
-      # works because ubuntu-latest ships a running Docker daemon.
+      # No environment setup: 184 of the tests mock their collaborators, and
+      # ApplicationTests and AirportRepositoryTest start their own Postgres via
+      # Testcontainers, which works because ubuntu-latest ships a running
+      # Docker daemon.
       - name: Run tests
         working-directory: backend
         run: ./mvnw -B --no-transfer-progress test
@@ -46,7 +47,7 @@ jobs:
           retention-days: 7
 
   frontend:
-    name: Frontend lint and build
+    name: Frontend tests, lint and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

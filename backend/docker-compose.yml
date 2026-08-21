@@ -60,6 +60,11 @@ services:
       #   PAYMENT_SIMULATED_FAILURE_RATE=1.0 docker compose --profile app up -d
       PAYMENT_SIMULATED_FAILURE_RATE: ${PAYMENT_SIMULATED_FAILURE_RATE:-0.0}
       PAYMENT_SIMULATED_LATENCY_MS: ${PAYMENT_SIMULATED_LATENCY_MS:-600}
+      # AI travel assistant. Optional: an empty value disables the feature
+      # rather than failing, so the default here is a working configuration.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5}
+      ANTHROPIC_MAX_TOKENS: ${ANTHROPIC_MAX_TOKENS:-8192}
     depends_on:
       db:
         condition: service_healthy

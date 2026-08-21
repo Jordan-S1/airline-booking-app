@@ -10,6 +10,7 @@ import {
   type ResultSection,
 } from "../components/FlightResultsList";
 import { BookingModal } from "../components/BookingModal";
+import { AssistantChat } from "../components/AssistantChat";
 import { seatClassLabel } from "../lib/seatClass";
 import { AuthModal } from "../components/AuthModal";
 import type { SearchSubmission } from "../components/FlightSearchPanel";
@@ -22,7 +23,11 @@ import { getBookingsByUser } from "../api/bookings";
 import { useAuth } from "../lib/auth";
 import { useCurrency } from "../lib/currency";
 import { parseApiInstant } from "../lib/datetime";
-import type { FlightSearchResponseDto, FlightStatusDto } from "../types/flight";
+import type {
+  FlightSearchRequestDto,
+  FlightSearchResponseDto,
+  FlightStatusDto,
+} from "../types/flight";
 import type { BookingResponseDto } from "../types/booking";
 
 type SearchStatus = "idle" | "loading" | "error" | "success";
@@ -306,6 +311,25 @@ export function DashboardPage() {
     }
   };
 
+  /**
+   * Books a flight the assistant found, through the ordinary booking modal.
+   *
+   * <p>The passenger count and cabin come from the search the assistant
+   * actually ran, not from the form panel — those two drift apart the moment
+   * someone types "two business seats" while the panel still says one economy,
+   * and the modal prices the booking from them.
+   */
+  const handleAssistantBook = (
+    flight: FlightSearchResponseDto,
+    search: FlightSearchRequestDto | null,
+  ) => {
+    if (search) {
+      setPassengerCount(search.passengers);
+      setSearchSeatClass(search.seatClass);
+    }
+    setBookingFlights([flight]);
+  };
+
   const handleSelectFlight = (
     sectionId: string,
     flight: FlightSearchResponseDto,
@@ -456,6 +480,9 @@ export function DashboardPage() {
           />
         </motion.div>
       </motion.div>
+
+      {/* Renders nothing unless the backend reports an API key is configured. */}
+      <AssistantChat onBookFlight={handleAssistantBook} />
 
       <div ref={resultsRef}>
         <FlightResultsList

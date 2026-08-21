@@ -65,6 +65,19 @@ opensky:
     lamax: ${OPENSKY_BBOX_LAMAX:56.0}
     lomax: ${OPENSKY_BBOX_LOMAX:2.0}
 
+# Anthropic — natural-language travel assistant
+# A blank api-key disables the feature rather than breaking it: the app starts
+# normally, GET /assistant/status reports available=false, and the frontend
+# hides the entry point. This is the only external dependency that costs money
+# per request, so it must be opt-in.
+# max-tokens covers thinking as well as the reply. Both calls are short, but
+# thinking is on for this model family and a truncated extraction comes back as
+# unparseable JSON, so the ceiling is set well above what the text needs.
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-opus-5}
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
+
 # Mock payment gateway
 # simulated-failure-rate is the probability a charge is rejected, for
 # exercising the failure path deliberately. It defaults to 0 — a gateway that
