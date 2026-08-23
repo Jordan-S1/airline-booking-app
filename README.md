@@ -62,6 +62,8 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 ## Live demo
 Hosted on Render for backend and Vercel for frontend - the backend spins down after inactivity, so the first request may take up to a minute to wake it.
 
+https://airline-booking-app-theta.vercel.app
+
 ---
 
 ## Quick start
