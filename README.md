@@ -59,6 +59,11 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 
 ---
 
+## Live demo
+Hosted on Render for backend and Vercel for frontend - the backend spins down after inactivity, so the first request may take up to a minute to wake it.
+
+---
+
 ## Quick start
 
 **Prerequisites:** Docker · Java 21 · Node 20.19+ or 22.13+
@@ -89,7 +94,7 @@ openssl rand -base64 32
 | `DB_URL`                         |    -     | Only needed when running the API outside Docker; Compose points it at the `db` service |
 | `SERVER_PORT`                    |    -     | Defaults to `8080`                                                                     |
 | `ANTHROPIC_API_KEY`              |    -     | Enables the travel assistant. Blank disables it; everything else still runs            |
-| `ANTHROPIC_MODEL`                |    -     | Defaults to `claude-opus-5`                                                            |
+| `ANTHROPIC_MODEL`                |    -     | Defaults to `claude-sonnet-5`                                                            |
 | `ANTHROPIC_MAX_TOKENS`           |    -     | Defaults to `8192`. Covers thinking as well as the reply                               |
 
 ### 2. Start the database and API

@@ -63,7 +63,7 @@ services:
       # AI travel assistant. Optional: an empty value disables the feature
       # rather than failing, so the default here is a working configuration.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
       ANTHROPIC_MAX_TOKENS: ${ANTHROPIC_MAX_TOKENS:-8192}
     depends_on:
       db:
