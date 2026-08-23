@@ -1,10 +1,14 @@
 import { Outlet } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
+import { ScrollToTop } from "./ScrollToTop";
 
 export function Layout() {
   return (
     <div className="relative min-h-screen overflow-x-hidden px-4 pb-20 sm:px-6 lg:px-8">
+      {/* Renders nothing; resets scroll when the route changes. */}
+      <ScrollToTop />
+
       {/* Ambient background glow */}
       <div
         aria-hidden

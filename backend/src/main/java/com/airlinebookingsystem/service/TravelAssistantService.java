@@ -25,34 +25,14 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Natural-language flight search.
+ * Natural-language flight search: extract, search, summarise.
  *
- * <p>The model is used twice and never in between:
- *
- * <ol>
- *   <li><strong>Extract.</strong> Turn a sentence into candidate search fields.</li>
- *   <li><strong>Search.</strong> {@link FlightService#searchFlights} runs
- *       unchanged against the live timetable.</li>
- *   <li><strong>Summarise.</strong> Describe the rows that came back, given
- *       only those rows as facts.</li>
- * </ol>
- *
- * <p><strong>The model cannot put a flight in front of a traveller.</strong>
- * Step 1 produces a claim, not a query: every field is checked against the
- * database before the search runs, and a claim that fails validation is
- * discarded rather than corrected. Step 3 produces prose, not data — the
- * flights in the response are the rows the database returned, whatever the
- * summary happens to say about them. An invented airline can therefore make the
- * wording wrong, but it cannot make a flight appear that does not exist, and it
- * cannot change a price.
- *
- * <p>The validation rules are deliberately asymmetric. Some failures are
- * silent, because the intent is unambiguous and a question would be noise (a
- * return date before the outbound one, an implausible passenger count, a cabin
- * that is not one of the three). Others stop the search, because filling them
- * in would mean answering a question the traveller did not ask (an airport the
- * network does not serve, a date that has already passed, a journey with no
- * destination).
+ * <p>The invariant, which is an absence and so cannot be read off the code
+ * below: <strong>nothing the model returns ever becomes data.</strong>
+ * Extraction produces a claim that is checked against the database before the
+ * search runs, and summarisation produces prose about rows already retrieved.
+ * An invented airline can make the wording wrong; it cannot add a flight or
+ * change a price.
  */
 @Service
 @RequiredArgsConstructor
@@ -104,9 +84,24 @@ public class TravelAssistantService {
         }
 
         ExtractedSearch extracted = parsed.get();
-        if (extracted.clarification() != null && !extracted.clarification().isBlank()) {
-            return AssistantResponse.question(extracted.clarification().trim());
-        }
+
+        /*
+         * The model's own wording for a question, used only if one turns out to
+         * be needed.
+         *
+         * Deliberately not an early return. The model sets this whenever the
+         * message names no origin — which is precisely when originHint is meant
+         * to supply one — so returning here made the hint dead in the only case
+         * it exists for. It also pre-empted the passenger clamp: asked for
+         * thirty seats, the model queried the group size instead of the search
+         * running for nine. Its wording is usually better than the fallbacks
+         * below, so it is kept; it just does not get to decide that a question
+         * is necessary.
+         */
+        String modelQuestion =
+                extracted.clarification() == null || extracted.clarification().isBlank()
+                        ? null
+                        : extracted.clarification().trim();
 
         // ---- Validation. Nothing below this line trusts the model. ----------
 
@@ -114,12 +109,12 @@ public class TravelAssistantService {
                 .or(() -> resolveAirport(request.originHint()))
                 .orElse(null);
         if (origin == null) {
-            return AssistantResponse.question("Which airport are you flying from?");
+            return ask(modelQuestion, "Which airport are you flying from?");
         }
 
         String destination = resolveAirport(extracted.arrivalAirport()).orElse(null);
         if (destination == null) {
-            return AssistantResponse.question(
+            return ask(modelQuestion,
                     "I could not match that destination to an airport we fly to. Where would you like to go?");
         }
 
@@ -132,13 +127,24 @@ public class TravelAssistantService {
 
         LocalDate departureDate = extracted.departureDate();
         if (departureDate == null) {
-            return AssistantResponse.question("Which date would you like to travel on?");
+            return ask(modelQuestion, "Which date would you like to travel on?");
         }
         if (departureDate.isBefore(today)) {
             // Refused rather than nudged forward: "last Friday" and "next
             // Friday" are a week apart, and picking one is not this code's call.
             return AssistantResponse.question(
                     "%s has already passed. Which date did you mean?".formatted(DAY.format(departureDate)));
+        }
+
+        // Past the rolling window there is nothing and never will be, so
+        // "no flights found — try a nearby date" is advice that cannot work.
+        // Empty means an empty timetable, which is not the traveller's problem
+        // to hear about; the search runs and finds nothing on its own.
+        Optional<LocalDate> lastBookable = flightService.getLatestDepartureDate();
+        if (lastBookable.isPresent() && departureDate.isAfter(lastBookable.get())) {
+            return AssistantResponse.question(
+                    "Our timetable only runs to %s at the moment, so there is nothing to show for %s yet. Pick a date on or before then and I will search it."
+                            .formatted(DAY.format(lastBookable.get()), DAY.format(departureDate)));
         }
 
         // A return before the outbound leg is a misreading of the sentence, not
@@ -174,6 +180,17 @@ public class TravelAssistantService {
                 false);
     }
 
+    /**
+     * Asks a question, preferring the model's wording to the fallback.
+     *
+     * <p>The model can see what the traveller actually wrote, so it names the
+     * city they asked for rather than saying "that destination". The fallback
+     * covers the case where it offered nothing.
+     */
+    private AssistantResponse ask(String modelQuestion, String fallback) {
+        return AssistantResponse.question(modelQuestion != null ? modelQuestion : fallback);
+    }
+
     // ---- Step 1: extraction ------------------------------------------------
 
     /**
@@ -203,7 +220,7 @@ public class TravelAssistantService {
                   arrivalAirport    three-letter IATA code, from the list below only
                   departureDate     ISO date, YYYY-MM-DD
                   returnDate        ISO date, or null for a one-way trip
-                  passengers        whole number from 1 to 9
+                  passengers        whole number, exactly as many as they asked for
                   seatClass         ECONOMY, BUSINESS or FIRST
                   clarification     a short question to ask instead of searching, or null
 
@@ -212,6 +229,13 @@ public class TravelAssistantService {
                   on it, leave the field null and say so in clarification.
                 - Never invent a destination the traveller did not name.
                 - Resolve relative dates against today's date below.
+                - A bare date that has already gone by this year stays in the past.
+                  Do not roll it forward into next year: return the date as said, and
+                  the traveller will be asked which one they meant. Only use a later
+                  year if they named one.
+                - Report the passenger count they actually said, even if it is large.
+                  Limits are applied afterwards; silently reducing it here means a
+                  request for thirty seats is searched as one.
                 - "cheapest", "direct" and similar preferences are not fields here; ignore them.
                 - If the message is not about finding a flight, leave every field null and
                   put a brief, friendly reply in clarification.

@@ -10,7 +10,7 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
   <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB">
   <img alt="TypeScript 5" src="https://img.shields.io/badge/TypeScript-5-3178C6">
   <img alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-336791">
-  <img alt="240 tests passing" src="https://img.shields.io/badge/tests-240%20passing-brightgreen">
+  <img alt="249 tests passing" src="https://img.shields.io/badge/tests-249%20passing-brightgreen">
   <a href="https://github.com/Jordan-S1/airline-booking-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Jordan-S1/airline-booking-app/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
@@ -125,15 +125,15 @@ npm run dev
 ## Testing
 
 ```bash
-cd backend  && ./mvnw test                    # 186 tests
-cd frontend && npm run test && npm run lint && npm run build   # 54 tests
+cd backend  && ./mvnw test                    # 192 tests
+cd frontend && npm run test && npm run lint && npm run build   # 57 tests
 ```
 
-Most of the backend suite needs **no environment setup** - clone and run. 178 tests are unit and web-layer slices with mocked collaborators; two start a real PostgreSQL container and need a running Docker daemon.
+Most of the backend suite needs **no environment setup** - clone and run. 190 tests are unit and web-layer slices with mocked collaborators; two start a real PostgreSQL container and need a running Docker daemon.
 
 | Suite                         | Tests | Covers                                                                                 |
 | ----------------------------- | :---: | -------------------------------------------------------------------------------------- |
-| `TravelAssistantServiceTest`  |  36   | Grounding, validation of every model-supplied field, degradation                       |
+| `TravelAssistantServiceTest`  |  42   | Grounding, validation of every model-supplied field, degradation                       |
 | `SeatClassUtilsTest`          |  33   | Cabin parsing, availability, price selection                                           |
 | `BookingServiceTest`          |  28   | Seat inventory, ownership, status transitions, pricing, refund-before-release ordering |
 | `PaymentServiceTest`          |  24   | Money handling, refunds, gateway failure paths                                         |
@@ -162,7 +162,7 @@ Three design notes, because all three are easy to get wrong:
 
 | Job                                 | Does                                                     | Runs on                      |
 | ----------------------------------- | -------------------------------------------------------- | ---------------------------- |
-| **Backend tests**                   | `./mvnw test` - all 186                                  | every push and PR            |
+| **Backend tests**                   | `./mvnw test` - all 192                                  | every push and PR            |
 | **Frontend tests, lint and build**  | `npm ci`, `npm run lint`, `npm test`, `npm run build`    | every push and PR            |
 | **Publish image**                   | Builds the Dockerfile and pushes to GHCR                 | `main` only, after both pass |
 
@@ -242,6 +242,8 @@ frontend/src/
 
 **Touch targets via `pointer-coarse`.** Interactive elements grow to 44 px on touch devices only, so the desktop layout keeps its intended density.
 
+**Scroll reset on route change.** A client-side navigation swaps the component tree without touching scroll, so opening a destination from halfway down Explore landed halfway down the destination. `ScrollToTop` resets it - but only on a pushed navigation, and only when the pathname changes. Back and forward keep the position the reader chose, and a query-string change is a filter, not a new page. React Router's `<ScrollRestoration />` would do this, but only for data routers.
+
 ---
 
 ## AI travel assistant
@@ -277,15 +279,22 @@ the search, and a field that fails is discarded rather than repaired:
 | ------------------------------- | ----------------------------------------- |
 | An airport not in the timetable | Discarded; asks where they mean. No search runs |
 | A date in the past              | Refused; asks which date they meant        |
+| A date past the rolling window  | Names the last date covered, rather than "no flights, try nearby" |
 | Departure equal to arrival      | Asks where they are flying to              |
 | A cabin that is not one of three| Falls back to `ECONOMY`                    |
 | 47 passengers                   | Clamped to 9                               |
 | A return date before departure  | Dropped silently; the one-way search stands |
 | Something that is not JSON      | Asks them to rephrase - never a guessed search |
 
-The first four stop the search, because filling them in would answer a question
+The first five stop the search, because filling them in would answer a question
 nobody asked. The last three are corrected in place, because the intent is
 unambiguous and a follow-up question would be noise.
+
+The window's end is read from the timetable, not computed from
+`flights.schedule.horizon-days`. The scheduler materialises dates in each
+airport's own zone, so airports east of UTC push the last date a day past
+`today + horizon` - copying that arithmetic here would mean copying the
+correction too, and refusing a date that is genuinely bookable.
 
 Step ③ produces prose, not data. The `flights` array is whatever the database
 returned, so a summary that names a nonexistent airline makes the _wording_

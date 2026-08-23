@@ -26,6 +26,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +68,10 @@ class TravelAssistantServiceTest {
     /** Comfortably inside the rolling schedule horizon and never in the past. */
     private static final LocalDate FUTURE = LocalDate.now(ZoneOffset.UTC).plusDays(7);
 
+    /** Must match the service's, so the assertions read the same wording a user does. */
+    private static final DateTimeFormatter DAY =
+            DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.UK);
+
     private static final String QUESTION = "cheapest flight to Paris next Friday";
 
     /** The one real row. Anything else appearing in a response is invented. */
@@ -93,6 +99,9 @@ class TravelAssistantServiceTest {
         when(claudeClient.isConfigured()).thenReturn(true);
         when(flightService.searchFlights(any(FlightSearchRequest.class)))
                 .thenReturn(new FlightSearchResult(List.of(REAL_ROW), null, false));
+        // The rolling window, well past every date these tests search for.
+        when(flightService.getLatestDepartureDate())
+                .thenReturn(Optional.of(LocalDate.now(ZoneOffset.UTC).plusDays(14)));
     }
 
     private static Airport airport(String code, String city, String country) {
@@ -256,6 +265,65 @@ class TravelAssistantServiceTest {
 
             verify(flightService, never()).searchFlights(any(FlightSearchRequest.class));
             assertThat(response.reply()).containsIgnoringCase("where are you flying to");
+        }
+
+        /**
+         * The timetable is a moving 14-day window, so a date past its end finds
+         * nothing however many nearby dates are tried. Answering "no flights,
+         * try a day either side" sends someone round a loop that cannot
+         * terminate; saying where the window ends lets them pick a date that
+         * can work.
+         */
+        @Test
+        @DisplayName("a date past the end of the timetable says so instead of searching")
+        void dateBeyondTheHorizonIsExplained() {
+            LocalDate lastBookable = LocalDate.now(ZoneOffset.UTC).plusDays(14);
+            LocalDate christmas = LocalDate.now(ZoneOffset.UTC).plusMonths(4);
+            modelSays(
+                    "{\"departureAirport\":\"DUB\",\"arrivalAirport\":\"CDG\","
+                            + "\"departureDate\":\"" + christmas + "\"}",
+                    "unused");
+
+            AssistantResponse response = ask();
+
+            verify(flightService, never()).searchFlights(any(FlightSearchRequest.class));
+            assertThat(response.needsMoreInfo()).isTrue();
+            assertThat(response.reply())
+                    .contains(DAY.format(lastBookable))
+                    .doesNotContain("try a day");
+        }
+
+        @Test
+        @DisplayName("the last date the timetable covers is still searched")
+        void theHorizonItselfIsInclusive() {
+            LocalDate lastBookable = LocalDate.now(ZoneOffset.UTC).plusDays(14);
+            modelSays(
+                    "{\"departureAirport\":\"DUB\",\"arrivalAirport\":\"CDG\","
+                            + "\"departureDate\":\"" + lastBookable + "\"}",
+                    "Here are your options.");
+
+            AssistantResponse response = ask();
+
+            assertThat(capturedSearch().departureDate()).isEqualTo(lastBookable);
+            assertThat(response.needsMoreInfo()).isFalse();
+        }
+
+        /**
+         * An empty timetable is a deployment problem, not something to explain
+         * to a traveller as though they had asked for the wrong date.
+         */
+        @Test
+        @DisplayName("an empty timetable does not block the search")
+        void emptyTimetableDoesNotBlock() {
+            when(flightService.getLatestDepartureDate()).thenReturn(Optional.empty());
+            when(flightService.searchFlights(any(FlightSearchRequest.class)))
+                    .thenReturn(new FlightSearchResult(List.of(), null, false));
+            modelSays(extraction("\"passengers\":1"), "Nothing found.");
+
+            AssistantResponse response = ask();
+
+            verify(flightService).searchFlights(any(FlightSearchRequest.class));
+            assertThat(response.needsMoreInfo()).isFalse();
         }
 
         @Test
@@ -474,6 +542,66 @@ class TravelAssistantServiceTest {
             verify(flightService, never()).searchFlights(any(FlightSearchRequest.class));
             assertThat(response.reply()).isEqualTo("Which city would you like to fly to?");
             assertThat(response.needsMoreInfo()).isTrue();
+        }
+
+        /**
+         * Found against the live model, not the mock.
+         *
+         * <p>Asked for a flight with no origin, the real model fills in
+         * `clarification` <em>and</em> the fields it could read. Returning on
+         * the clarification made originHint unreachable in the one case it
+         * exists for. The mock never showed this because the scripted output
+         * for that test set no clarification — a shape the real model does not
+         * produce for that input.
+         */
+        @Test
+        @DisplayName("the origin hint answers the model's question rather than being skipped by it")
+        void hintOutranksAClarificationItCanAnswer() {
+            modelSays(
+                    "{\"arrivalAirport\":\"CDG\",\"departureDate\":\"" + FUTURE + "\","
+                            + "\"clarification\":\"Which city will you be departing from?\"}",
+                    "Here are your options.");
+
+            AssistantResponse response =
+                    service.answer(new AssistantRequest(QUESTION, "MAD"));
+
+            assertThat(capturedSearch().departureAirport()).isEqualTo("MAD");
+            assertThat(response.needsMoreInfo()).isFalse();
+            assertThat(response.flights()).containsExactly(REAL_ROW);
+        }
+
+        /**
+         * Same root cause: a clarification must not stand in for a rule the
+         * service is supposed to apply itself. Asked for thirty seats, the
+         * model queries the group size; the spec says clamp and search.
+         */
+        @Test
+        @DisplayName("a clarification does not pre-empt the passenger clamp")
+        void clarificationDoesNotPreEmptTheClamp() {
+            modelSays(
+                    extraction("\"passengers\":30,"
+                            + "\"clarification\":\"I can only book up to 9 passengers.\""),
+                    "Here are your options.");
+
+            AssistantResponse response = ask();
+
+            assertThat(capturedSearch().passengers()).isEqualTo(9);
+            assertThat(response.needsMoreInfo()).isFalse();
+        }
+
+        /** When a question really is needed, the model's wording is the better one. */
+        @Test
+        @DisplayName("prefers the model's wording to the generic fallback")
+        void modelWordingWinsWhenAQuestionIsNeeded() {
+            modelSays(
+                    "{\"departureAirport\":\"DUB\",\"departureDate\":\"" + FUTURE + "\","
+                            + "\"clarification\":\"SkyAir does not serve Reykjavik.\"}",
+                    "unused");
+
+            AssistantResponse response = ask();
+
+            verify(flightService, never()).searchFlights(any(FlightSearchRequest.class));
+            assertThat(response.reply()).isEqualTo("SkyAir does not serve Reykjavik.");
         }
     }
 

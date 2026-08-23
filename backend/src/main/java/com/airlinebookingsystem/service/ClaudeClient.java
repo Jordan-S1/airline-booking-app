@@ -18,20 +18,17 @@ import java.util.List;
 /**
  * A thin wrapper over the Anthropic Messages API.
  *
- * <p>Deliberately knows nothing about flights, airports or search. It takes a
- * system prompt and a message and returns text, which is what makes it
- * replaceable by a mock in {@code TravelAssistantServiceTest} — the grounding
- * rules are worth testing precisely because they must hold for <em>any</em>
- * model output, and that can only be exercised if the model can be made to say
- * whatever the test needs.
+ * <p>Knows nothing about flights on purpose: a mock of this class can be told
+ * to say anything, which is the only way to test that the grounding rules hold
+ * for output no real model can be asked to produce on cue.
  *
- * <p>Modelled on {@link OpenSkyService}: a {@link RestClient} built from the
- * shared builder, failures wrapped in {@link ExternalServiceException} (which
- * the global handler maps to 503), and configuration logged once at startup.
+ * <p>A blank {@code anthropic.api-key} is a switched-off feature, not a
+ * misconfiguration — hence the {@code :} default on the property, and a startup
+ * log rather than a failed context.
  *
- * <p>An absent {@code anthropic.api-key} is not a failure. The property
- * defaults to blank so the application starts normally without one; the
- * assistant simply reports itself unavailable and the frontend hides it.
+ * <p>{@link ExternalServiceException} is the failure type throughout because
+ * the global handler maps it to 503: nothing that goes wrong out here is a
+ * fault in this application.
  */
 @Service
 @Slf4j
@@ -41,12 +38,10 @@ public class ClaudeClient {
     private static final String ANTHROPIC_VERSION = "2023-06-01";
 
     /**
-     * Both calls the assistant makes are short and structured — read a sentence
-     * into fields, or describe a list of rows. Thinking stays on (it is on by
-     * default for this model family, and it is what resolves "next Friday"),
-     * but at low effort, because a chat box that takes twenty seconds to answer
-     * reads as broken. Disabling thinking outright is the worse trade: it can
-     * leak reasoning into the visible text.
+     * Thinking stays on — it is what resolves "next Friday" — but at low
+     * effort, because a chat box taking twenty seconds reads as broken.
+     * Disabling it outright is the worse trade: reasoning can leak into the
+     * visible text.
      */
     private static final String EFFORT = "low";
 
@@ -84,7 +79,7 @@ public class ClaudeClient {
         }
     }
 
-    /** Whether an API key is present. Blank means the feature is switched off. */
+    /** Whether an API key is present. */
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isBlank();
     }
@@ -96,11 +91,8 @@ public class ClaudeClient {
      * no shared history, so there is no conversation to carry.
      *
      * @return the concatenated text blocks, never null or blank
-     * @throws ExternalServiceException if the key is missing, the call fails, or
-     *                                  the response carries no usable text —
-     *                                  all of which surface as 503 rather than
-     *                                  500, since none of them are a fault in
-     *                                  this application
+     * @throws ExternalServiceException on a missing key, a failed call, or a
+     *                                  response with no usable text
      */
     public String complete(String systemPrompt, String userMessage) {
         if (!isConfigured()) {

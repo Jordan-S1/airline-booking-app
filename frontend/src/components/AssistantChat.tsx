@@ -21,11 +21,8 @@ const SUGGESTIONS = [
 ];
 
 /**
- * One exchange in the transcript.
- *
- * <p>`flights` on an assistant turn is the API's array verbatim. It is kept per
- * turn rather than hoisted into a single "current results" value so that
- * scrolling back shows what was actually said at the time, instead of every
+ * `flights` is kept per turn rather than hoisted into one "current results"
+ * value, so scrolling back shows what was said at the time instead of every
  * earlier answer silently re-pointing at the latest search.
  */
 type Turn =
@@ -52,12 +49,9 @@ function formatSearchDate(iso: string) {
 }
 
 /**
- * A flight inside the transcript.
- *
- * <p>Deliberately not {@link FlightResultsList}: that is a full-width card with
- * its own heading and section machinery, and nesting it inside a chat bubble
- * would read as a page within a page. This shows the same facts at the density
- * a conversation can carry.
+ * Deliberately not `FlightResultsList`: that is a full-width card with its own
+ * heading and section machinery, and nesting it in a chat bubble reads as a
+ * page within a page. Same facts, conversational density.
  */
 function ChatFlightRow({
   flight,
@@ -146,12 +140,9 @@ interface AssistantChatProps {
 }
 
 /**
- * Natural-language flight search.
- *
- * <p>Renders nothing at all when the backend reports the assistant
- * unconfigured. Hiding it is the point: offering a chat box that answers 503 on
- * the first message is worse than not offering one, and whether a key is
- * present is a server-side fact the browser cannot infer.
+ * Renders nothing when the backend reports no API key. Offering a chat box that
+ * answers 503 on the first message is worse than not offering one, and whether
+ * a key exists is a server-side fact the browser cannot infer.
  */
 export function AssistantChat({ onBookFlight, originHint }: AssistantChatProps) {
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -179,8 +170,8 @@ export function AssistantChat({ onBookFlight, originHint }: AssistantChatProps) 
     };
   }, []);
 
-  // Keep the newest turn in view. Reading the ref inside the effect rather than
-  // during render is what keeps this out of the compiler's way.
+  // Reading the ref inside the effect rather than during render is what keeps
+  // this clear of react-hooks/refs.
   useEffect(() => {
     if (turns.length === 0) return;
     transcriptEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });

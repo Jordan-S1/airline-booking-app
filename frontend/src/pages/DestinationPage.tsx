@@ -11,7 +11,8 @@ import {
 } from "../components/FlightResultsList";
 import { BookingModal } from "../components/BookingModal";
 import { SelectField, type SelectOption } from "../components/SelectField";
-import { formatInZone, formatLocalDate } from "../lib/datetime";
+import { formatInZone, formatLocalDate, formatLocalTime } from "../lib/datetime";
+import { useNow } from "../lib/useNow";
 import { getAirportByCode } from "../api/airports";
 import { getArrivalsAt } from "../api/flights";
 import type {
@@ -51,6 +52,8 @@ export function DestinationPage() {
     useState<FlightSearchResponseDto | null>(null);
   const [filterQuery, setFilterQuery] = useState("");
   const [filterDay, setFilterDay] = useState("");
+  // Ticks so the destination's local time does not go stale in an open tab.
+  const now = useNow();
 
   useEffect(() => {
     if (!code) return;
@@ -148,7 +151,7 @@ export function DestinationPage() {
           />
 
           <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <div className="flex gap-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:col-span-2">
+            <div className="flex gap-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-obsidian-raised dark:shadow-none sm:col-span-2 sm:gap-6">
               <div className="flex min-w-0 flex-1 flex-col">
                 <div>
                   <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
@@ -157,8 +160,14 @@ export function DestinationPage() {
                   <p className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                     {airport.city}
                   </p>
+                  {/* The IANA identifier ("America/New_York") is a database key,
+                      not a label — and naming the city again would only repeat
+                      the heading. What a traveller wants from a zone is the
+                      time it is there now. */}
                   <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                    {airport.country} · {airport.timezone}
+                    {airport.country} ·{" "}
+                    {formatLocalTime(new Date(now).toISOString(), airport.timezone)}{" "}
+                    local
                   </p>
                 </div>
                 {/* mt-auto pins the stat to the bottom so the card fills its height */}
@@ -178,12 +187,16 @@ export function DestinationPage() {
                 initial={{ opacity: 0, scale: 0.94 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", stiffness: 240, damping: 22 }}
-                className="hidden shrink-0 flex-col items-center justify-center gap-2 sm:flex"
+                className="flex shrink-0 flex-col items-center justify-center gap-2"
               >
+                {/* Scaled down rather than hidden on narrow screens: at h-24 it
+                    crowded the city name, but dropping it left the card visibly
+                    lopsided and lost the one piece of country context above the
+                    fold. */}
                 <CountryFlag
                   countryCode={airport.countryCode}
                   country={airport.country}
-                  className="h-24 w-auto rounded-lg border border-zinc-200 shadow-sm dark:border-white/10 dark:shadow-none"
+                  className="h-14 w-auto rounded-lg border border-zinc-200 shadow-sm dark:border-white/10 dark:shadow-none sm:h-24"
                 />
                 <span className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                   <MapPin className="h-3 w-3" strokeWidth={2} />

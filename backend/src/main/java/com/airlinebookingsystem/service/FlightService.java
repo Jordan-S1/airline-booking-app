@@ -92,6 +92,21 @@ public class FlightService {
         return new FlightSearchResult(outboundFlights, returnFlights, isRoundTrip);
     }
 
+    /**
+     * How far ahead the timetable currently runs.
+     *
+     * <p>The rolling schedule keeps a moving window of dates, so a search
+     * beyond it finds nothing and always will — which is worth telling a
+     * caller apart from "this route is full that day".
+     *
+     * @return the last date with a bookable flight, or empty if there are none
+     */
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> getLatestDepartureDate() {
+        return Optional.ofNullable(flightRepository.findLatestDepartureTime())
+                .map(LocalDateTime::toLocalDate);
+    }
+
     @Transactional(readOnly = true)
     public List<FlightSearchResponse> getUpcomingFlights() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);

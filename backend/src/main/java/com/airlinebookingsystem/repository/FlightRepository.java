@@ -133,6 +133,23 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
     List<Flight> findUpcomingFlights(@Param("now") LocalDateTime now);
 
     /**
+     * The latest departure the timetable currently holds.
+     *
+     * <p>Asked of the data rather than derived from
+     * {@code flights.schedule.horizon-days}, because the two do not agree. The
+     * scheduler materialises dates in each airport's own zone, so airports east
+     * of UTC push the last date a day past {@code today + horizon}. Recomputing
+     * that arithmetic here would mean copying it plus a correction, and going
+     * stale the moment the scheduler changes.
+     *
+     * <p>Null when there are no active flights at all.
+     *
+     * @return the latest active departure, or null
+     */
+    @Query("SELECT MAX(f.departureTime) FROM Flight f WHERE f.active = true")
+    LocalDateTime findLatestDepartureTime();
+
+    /**
      * Retrieves upcoming active flights arriving at a given airport, from any
      * origin. Backs the "flights to this destination" view, which — unlike
      * search — has no origin to filter on.
