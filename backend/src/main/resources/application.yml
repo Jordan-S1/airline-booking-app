@@ -75,7 +75,7 @@ opensky:
 # unparseable JSON, so the ceiling is set well above what the text needs.
 anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
-  model: ${ANTHROPIC_MODEL:claude-opus-5}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-5}
   max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
 
 # Mock payment gateway

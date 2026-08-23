@@ -53,7 +53,7 @@ public class ClaudeClient {
     @Value("${anthropic.api-key:}")
     private String apiKey;
 
-    @Value("${anthropic.model:claude-opus-5}")
+    @Value("${anthropic.model:claude-sonnet-5}")
     private String model;
 
     @Value("${anthropic.max-tokens:8192}")
