@@ -4,6 +4,7 @@ import com.airlinebookingsystem.entity.PasswordResetToken;
 import com.airlinebookingsystem.entity.User;
 import com.airlinebookingsystem.repository.PasswordResetTokenRepository;
 import com.airlinebookingsystem.repository.UserRepository;
+import com.airlinebookingsystem.service.mail.ResetLinkSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,13 +24,10 @@ import java.util.Optional;
 /**
  * Password reset by single-use token.
  *
- * <p><strong>No email is sent.</strong> This project has no mail provider, so
- * the generated link is written to the server log and nowhere else. That keeps
- * the security properties intact — only someone who can already read the
- * server's logs can complete a reset — whereas returning the token in the HTTP
- * response would turn "forgot password" into an account takeover for any
- * address an attacker can guess. Wiring in a mail provider means changing
- * where the link is delivered and nothing else.
+ * <p>Delivery lives behind {@link ResetLinkSender} and is chosen at startup:
+ * SMTP if a host is configured, the server log otherwise. Either way the token
+ * never appears in the HTTP response, which would turn "forgot password" into
+ * account takeover for any guessable address.
  *
  * <p>The design points that matter:
  * <ul>
@@ -50,6 +48,7 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ResetLinkSender resetLinkSender;
 
     @Value("${security.password-reset.ttl-minutes:30}")
     private int ttlMinutes;
@@ -88,10 +87,18 @@ public class PasswordResetService {
                 .createdAt(now)
                 .build());
 
-        // Stands in for the email. The token appears here once and is not
-        // stored, so this log line is the only copy in existence.
-        log.info("Password reset link for {}: /reset-password?token={} (valid {} minutes)",
-                user.getEmail(), token, ttlMinutes);
+        // Delivery is somebody else's problem, and must stay that way: the
+        // token is already committed and the caller has already been promised
+        // nothing more specific than "if that address has an account". Senders
+        // are contracted not to throw; this catch is here so that a sender that
+        // breaks that contract still cannot turn a delivery failure into a
+        // failed request.
+        try {
+            resetLinkSender.send(user, token, ttlMinutes);
+        } catch (RuntimeException ex) {
+            log.warn("Reset link for user ID {} could not be delivered: {}",
+                    user.getId(), ex.getMessage());
+        }
     }
 
     /**

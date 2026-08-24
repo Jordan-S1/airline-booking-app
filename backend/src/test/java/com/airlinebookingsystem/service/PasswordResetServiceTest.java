@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -46,6 +47,7 @@ class PasswordResetServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private PasswordResetTokenRepository tokenRepository;
+    @Mock private com.airlinebookingsystem.service.mail.ResetLinkSender resetLinkSender;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -59,7 +61,8 @@ class PasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PasswordResetService(userRepository, tokenRepository, passwordEncoder);
+        service = new PasswordResetService(
+                userRepository, tokenRepository, passwordEncoder, resetLinkSender);
         ReflectionTestUtils.setField(service, "ttlMinutes", 30);
 
         user = User.builder()
@@ -74,6 +77,17 @@ class PasswordResetServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         when(tokenRepository.save(any(PasswordResetToken.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    /** Mirrors the service's own hashing, so the two can be compared. */
+    private static String sha256Hex(String value) {
+        try {
+            return java.util.HexFormat.of().formatHex(
+                    java.security.MessageDigest.getInstance("SHA-256")
+                            .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** Captures the token record the service persisted. */
@@ -146,6 +160,54 @@ class PasswordResetServiceTest {
 
             assertThatCode(() -> service.requestReset(null)).doesNotThrowAnyException();
             verify(tokenRepository, never()).save(any(PasswordResetToken.class));
+        }
+
+        /**
+         * The plaintext handed to the sender must be the one the stored hash
+         * was computed from, or the link in the email opens nothing. Nothing
+         * else can catch this: the service holds the plaintext for the length
+         * of one method and the database only ever sees the digest.
+         */
+        @Test
+        @DisplayName("hands the sender the token the stored hash was made from")
+        void sentTokenMatchesTheStoredHash() {
+            service.requestReset(EMAIL);
+
+            ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
+            verify(resetLinkSender).send(eq(user), sent.capture(), eq(30));
+
+            assertThat(sha256Hex(sent.getValue())).isEqualTo(savedToken().getTokenHash());
+        }
+
+        /**
+         * Delivery must not become the tell. Sending only for registered
+         * addresses is the whole reason the send is asynchronous — but it must
+         * also never be attempted for an address with no account.
+         */
+        @Test
+        @DisplayName("never contacts the sender for an address with no account")
+        void unknownAddressIsNeverSentAnything() {
+            when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+
+            service.requestReset("nobody@example.com");
+
+            verify(resetLinkSender, never()).send(any(User.class), anyString(), anyInt());
+        }
+
+        /**
+         * The token is committed before delivery is attempted, so a sender that
+         * fails must not unwind the request. In production the send is @Async
+         * and cannot throw here at all; this pins the behaviour for the case
+         * where it is called inline.
+         */
+        @Test
+        @DisplayName("survives a sender that throws")
+        void senderFailureDoesNotFailTheRequest() {
+            org.mockito.Mockito.doThrow(new RuntimeException("SMTP down"))
+                    .when(resetLinkSender).send(any(User.class), anyString(), anyInt());
+
+            assertThatCode(() -> service.requestReset(EMAIL)).doesNotThrowAnyException();
+            verify(tokenRepository).save(any(PasswordResetToken.class));
         }
 
         @Test

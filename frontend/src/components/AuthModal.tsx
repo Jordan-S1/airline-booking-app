@@ -294,8 +294,12 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
 
             {mode === "login" && resetRequested && (
               <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300">
-                If that address has an account, a reset link has been issued.
-                This demo sends no email - the link is written to the server log.
+                {/* Deliberately vague about delivery: the backend emails the
+                    link when SMTP is configured and logs it otherwise, and the
+                    browser has no way to know which. Naming one would be wrong
+                    half the time. */}
+                If that address has an account, a reset link is on its way.
+                Check your inbox.
               </p>
             )}
 

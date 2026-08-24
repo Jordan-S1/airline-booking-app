@@ -10,9 +10,14 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
   <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB">
   <img alt="TypeScript 5" src="https://img.shields.io/badge/TypeScript-5-3178C6">
   <img alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-336791">
-  <img alt="249 tests passing" src="https://img.shields.io/badge/tests-249%20passing-brightgreen">
+  <img alt="257 tests passing" src="https://img.shields.io/badge/tests-257%20passing-brightgreen">
   <a href="https://github.com/Jordan-S1/airline-booking-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Jordan-S1/airline-booking-app/actions/workflows/ci.yml/badge.svg"></a>
 </p>
+
+### ▶ [Try it live](https://airline-booking-app-theta.vercel.app)
+
+Hosted on Vercel, with the API on Render. The backend spins down when idle, so
+the first request may take up to a minute to wake it.
 
 ![SkyAir flight search](docs/dashboard.png)
 
@@ -27,7 +32,7 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 - **Multi-currency display** - prices are stored in EUR and converted only for display
 - **Admin console** - full CRUD over flights, airlines and airports, plus a network-wide booking view
 - **Rolling timetable** - flight numbers are treated as daily services and materialised across a moving horizon, so there is always bookable inventory
-- **Password reset** by single-use, expiring token - see the note below on why no email is sent
+- **Password reset** by single-use, expiring token, emailed over SMTP - with a bundled local inbox so it works without a domain
 - **AI travel assistant** - ask for flights in plain English and get real rows back, never invented ones
 
 ![Search results](docs/search-results.png)
@@ -56,13 +61,6 @@ A full-stack airline booking platform - flight search, per-cabin seat inventory,
 **UTC everywhere.** Departure and arrival times are stored as UTC instants. Each airport carries an IANA timezone and conversion happens only at the display layer, so a Dublin→Madrid flight shows correct local times at both ends without the stored data ever being ambiguous.
 
 **Schema owned by migrations.** Hibernate runs with `ddl-auto=validate` and never alters the database. Flyway is the single source of truth, so a mismatch between an entity and a migration fails at startup instead of drifting silently.
-
----
-
-## Live demo
-Hosted on Render for backend and Vercel for frontend - the backend spins down after inactivity, so the first request may take up to a minute to wake it.
-
-https://airline-booking-app-theta.vercel.app
 
 ---
 
@@ -98,6 +96,10 @@ openssl rand -base64 32
 | `ANTHROPIC_API_KEY`              |    -     | Enables the travel assistant. Blank disables it; everything else still runs            |
 | `ANTHROPIC_MODEL`                |    -     | Defaults to `claude-sonnet-5`                                                            |
 | `ANTHROPIC_MAX_TOKENS`           |    -     | Defaults to `8192`. Covers thinking as well as the reply                               |
+| `SPRING_MAIL_HOST`               |    -     | SMTP host for reset emails. Blank logs the link instead. Compose sets it to `mail`      |
+| `SPRING_MAIL_PORT`               |    -     | Defaults to `1025`, the bundled catcher's port                                          |
+| `MAIL_FROM`                      |    -     | Sender address on reset emails                                                          |
+| `APP_BASE_URL`                   |    -     | Origin the reset link points at. Defaults to `http://localhost:5173`                    |
 
 ### 2. Start the database and API
 
@@ -118,12 +120,13 @@ npm install
 npm run dev
 ```
 
-| Service    | URL                                   |
-| ---------- | ------------------------------------- |
-| App        | http://localhost:5173                 |
-| API        | http://localhost:8080/api/v1          |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| Health     | http://localhost:8080/actuator/health |
+| Service     | URL                                   |
+| ----------- | ------------------------------------- |
+| App         | http://localhost:5173                 |
+| API         | http://localhost:8080/api/v1          |
+| Swagger UI  | http://localhost:8080/swagger-ui.html |
+| Health      | http://localhost:8080/actuator/health |
+| Mail inbox  | http://localhost:8025                 |
 
 > CORS is restricted to `localhost:5173`. If Vite falls back to another port because 5173 is taken, either free it or add the new origin to `SecurityConfig`.
 
@@ -132,11 +135,11 @@ npm run dev
 ## Testing
 
 ```bash
-cd backend  && ./mvnw test                    # 192 tests
+cd backend  && ./mvnw test                    # 200 tests
 cd frontend && npm run test && npm run lint && npm run build   # 57 tests
 ```
 
-Most of the backend suite needs **no environment setup** - clone and run. 190 tests are unit and web-layer slices with mocked collaborators; two start a real PostgreSQL container and need a running Docker daemon.
+Most of the backend suite needs **no environment setup** - clone and run. 198 tests are unit and web-layer slices with mocked collaborators; two start a real PostgreSQL container and need a running Docker daemon.
 
 | Suite                         | Tests | Covers                                                                                 |
 | ----------------------------- | :---: | -------------------------------------------------------------------------------------- |
@@ -144,11 +147,12 @@ Most of the backend suite needs **no environment setup** - clone and run. 190 te
 | `SeatClassUtilsTest`          |  33   | Cabin parsing, availability, price selection                                           |
 | `BookingServiceTest`          |  28   | Seat inventory, ownership, status transitions, pricing, refund-before-release ordering |
 | `PaymentServiceTest`          |  24   | Money handling, refunds, gateway failure paths                                         |
-| `PasswordResetServiceTest`    |  15   | Token entropy, single use, expiry, user enumeration                                    |
+| `PasswordResetServiceTest`    |  18   | Token entropy, single use, expiry, user enumeration                                    |
 | `AuthServiceTest`             |  11   | Password hashing, duplicate email, role assignment, credential failures                |
 | `AuthControllerTest`          |   9   | HTTP contract and bean validation                                                      |
 | `BookingControllerTest`       |   9   | Role-based access, checked from both an allowed and a forbidden role                   |
 | `AssistantControllerTest`     |   6   | Both routes public, 503 rather than 500 when unconfigured                               |
+| `ResetLinkSenderTest`         |   5   | Absolute link, correct recipient, failures swallowed                                    |
 | `UserServiceChangePasswordTest` | 7   | Current-password check, and why it answers 400 rather than 401                         |
 | `AirportRepositoryTest`       |   7   | Search ranking, against a real Postgres                                                |
 | `ApplicationTests`            |   1   | Context starts against a real Postgres                                                 |
@@ -169,7 +173,7 @@ Three design notes, because all three are easy to get wrong:
 
 | Job                                 | Does                                                     | Runs on                      |
 | ----------------------------------- | -------------------------------------------------------- | ---------------------------- |
-| **Backend tests**                   | `./mvnw test` - all 192                                  | every push and PR            |
+| **Backend tests**                   | `./mvnw test` - all 200                                  | every push and PR            |
 | **Frontend tests, lint and build**  | `npm ci`, `npm run lint`, `npm test`, `npm run build`    | every push and PR            |
 | **Publish image**                   | Builds the Dockerfile and pushes to GHCR                 | `main` only, after both pass |
 
@@ -211,6 +215,9 @@ Full reference at `/swagger-ui.html`. Public routes need no token.
 
 ## Project layout
 
+<details>
+<summary>Directory tree</summary>
+
 ```
 backend/
   src/main/java/com/airlinebookingsystem/
@@ -232,6 +239,8 @@ frontend/src/
   lib/          Auth, currency, theme, date helpers
   types/        Shared DTO types
 ```
+
+</details>
 
 ---
 
@@ -279,8 +288,14 @@ two jobs and the real search runs between them:
    ③ summarise, given only those rows as facts
 ```
 
-Step ① produces a claim, not a query. Every field is checked before it reaches
-the search, and a field that fails is discarded rather than repaired:
+Step ① produces a claim, not a query: every field is checked against the
+database first, and one that fails is discarded rather than repaired. Step ③
+produces prose, not data — the `flights` array is whatever the database
+returned, so a summary naming a nonexistent airline makes the _wording_ wrong
+and nothing else. It cannot add a bookable flight or change a price.
+
+<details>
+<summary><b>What happens to each field the model returns</b></summary>
 
 | The model says                  | What happens                              |
 | ------------------------------- | ----------------------------------------- |
@@ -298,46 +313,29 @@ nobody asked. The last three are corrected in place, because the intent is
 unambiguous and a follow-up question would be noise.
 
 The window's end is read from the timetable, not computed from
-`flights.schedule.horizon-days`. The scheduler materialises dates in each
+`flights.schedule.horizon-days`: the scheduler materialises dates in each
 airport's own zone, so airports east of UTC push the last date a day past
-`today + horizon` - copying that arithmetic here would mean copying the
-correction too, and refusing a date that is genuinely bookable.
+`today + horizon`.
 
-Step ③ produces prose, not data. The `flights` array is whatever the database
-returned, so a summary that names a nonexistent airline makes the _wording_
-wrong and nothing else - it cannot add a bookable flight or change a price.
-Policing the wording as well would mean validating prose against the rows,
-which is a separate piece of work and is not done here.
+</details>
 
 **Losing the prose does not lose the answer.** If summarisation fails after a
 successful search, the flights are still returned with a plainly generated
-sentence built from the same rows.
+sentence built from the same rows. `ClaudeClient` knows nothing about flights,
+which is what makes the grounding testable — a mock can be told to say
+anything, and a real model cannot be asked to hallucinate on cue.
 
-`ClaudeClient` is a thin `RestClient` wrapper over the Messages API that knows
-nothing about flights - which is what makes the grounding testable, since the
-mock can be told to say anything.
-
-**On the dashboard**, `AssistantChat` renders the transcript, shows how each
-sentence was read as a row of chips, and books through the same `BookingModal`
-as the search panel - so the assistant is another way to drive the existing
-flow rather than a second one beside it. It renders nothing at all unless
-`/assistant/status` reports a key is configured.
+On the dashboard, `AssistantChat` books through the same `BookingModal` as the
+search panel, so the assistant drives the existing flow rather than a second
+one beside it. It renders nothing unless `/assistant/status` reports a key.
 
 ---
 
 ## Password reset
 
-There is no mail provider, so `POST /auth/forgot-password` writes the reset link
-to the **server log** instead of sending it:
-
-```
-docker compose --profile app logs app | grep "Password reset link"
-```
-
-The link is deliberately not returned in the HTTP response. Doing that would
-turn "forgot password" into account takeover for any address an attacker can
-guess, which is a worse demo than one extra step. Everything else is the real
-design:
+`POST /auth/forgot-password` emails a single-use link over SMTP. The token
+itself is never returned in the HTTP response - doing that would turn "forgot
+password" into account takeover for any address an attacker can guess.
 
 - 256 bits from `SecureRandom`, not a UUID
 - only the SHA-256 is stored, so the table is useless if it leaks
@@ -347,7 +345,18 @@ design:
   registered, so it cannot be used to discover who has an account
 - unknown, expired and already-used tokens all give the same message
 
-Adding email means changing where the link is delivered and nothing else.
+Real delivery to arbitrary inboxes needs a verified domain, which a portfolio
+project has no business buying. Compose therefore bundles **Mailpit**: the app
+makes a genuine SMTP send and the message lands in a web inbox at
+[localhost:8025](http://localhost:8025) instead of the internet, so no stranger
+is ever mailed by a demo. Swapping in a real provider is env vars only -
+`SPRING_MAIL_HOST`, port, credentials. No code changes.
+
+Delivery sits behind `ResetLinkSender`, chosen at startup by whether
+`spring.mail.host` is set: SMTP if it is, the server log if not. The send is
+`@Async` — partly for latency, mostly because a synchronous SMTP round-trip
+happens only for addresses that exist, which makes "registered" measurably
+slower than "not registered" and undoes the enumeration protection above.
 
 ---
 

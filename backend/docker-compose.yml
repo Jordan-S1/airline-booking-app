@@ -32,6 +32,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # ------ Mailpit — local SMTP catcher -------------
+  # Accepts any mail and shows it at http://localhost:8025. Nothing leaves the
+  # machine, so password reset can be demonstrated end to end without a domain,
+  # a provider account, or the risk of mailing a real stranger.
+  # (Mailpit, not MailHog: same idea, still maintained.)
+  mail:
+    container_name: airline-mailpit
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web inbox
+    networks:
+      - airline-network
+    restart: unless-stopped
+
   # ------ Spring Boot Application ---------------
   # Run with: docker-compose --profile app up
   # Or run the app locally and only use the DB service above.
@@ -65,6 +80,17 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
       ANTHROPIC_MAX_TOKENS: ${ANTHROPIC_MAX_TOKENS:-8192}
+      # Password reset delivery. Points at the mailpit service above, so the
+      # compose stack demonstrates real SMTP out of the box. Clear
+      # SPRING_MAIL_HOST to fall back to logging the link instead.
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-mail}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-1025}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@skyair.example}
+      # The link must be absolute to be clickable from an inbox, and points at
+      # the frontend because /reset-password is a frontend route.
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
     depends_on:
       db:
         condition: service_healthy

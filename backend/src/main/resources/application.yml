@@ -24,6 +24,21 @@ spring:
       hibernate:
         format_sql: true
 
+  # Outgoing mail — password reset links.
+  # host is deliberately absent: a blank value would still satisfy Boot's
+  # auto-configuration and produce a JavaMailSender pointed at nowhere. Leaving
+  # it unset means "no mail configured", which is the state this project ships
+  # in. Set SPRING_MAIL_HOST to switch delivery from the log to real SMTP.
+  # The properties below only take effect once a host exists; the defaults suit
+  # a local catcher, and a real provider wants both set to true.
+  mail:
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
   # Flyway — versioned database migrations
   flyway:
     enabled: true
@@ -31,6 +46,14 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     validate-on-migrate: true
+
+# Where this app is reachable in a browser.
+# A reset link has to be absolute to be clickable from an inbox; the frontend
+# origin is the right base, since /reset-password is a frontend route.
+app:
+  base-url: ${APP_BASE_URL:http://localhost:5173}
+  mail:
+    from: ${MAIL_FROM:no-reply@skyair.example}
 
 # JWT configuration
 # Generate a production secret with: openssl rand -base64 32
